@@ -1,0 +1,13 @@
+{
+    "name": "gearman/gearman-async",
+    "require": {
+        "react/react": "dev-master",
+        "evenement/evenement": "~2.0"
+    },
+    "license": "MIT",
+    "autoload": {
+        "psr-0": {
+            "Gearman": "src/"
+        }
+    }
+}
