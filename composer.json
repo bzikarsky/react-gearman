@@ -1,6 +1,7 @@
 {
     "name": "gearman/gearman-async",
     "require": {
+        "php": ">=5.4",
         "react/react": "dev-master",
         "evenement/evenement": "~2.0"
     },
@@ -9,5 +10,8 @@
         "psr-0": {
             "Gearman": "src/"
         }
+    },
+    "require-dev": {
+        "satooshi/php-coveralls": "dev-master"
     }
 }
