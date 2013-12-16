@@ -13,5 +13,8 @@
     },
     "require-dev": {
         "satooshi/php-coveralls": "dev-master"
+    },
+    "config": {
+        "bin-dir": "bin"
     }
 }
