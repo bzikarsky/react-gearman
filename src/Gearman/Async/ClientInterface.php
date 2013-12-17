@@ -53,4 +53,9 @@ interface ClientInterface
      * @return Promise
      */
     public function getStatus($task);
+
+    /**
+     * Disconnects the client from the server
+     */
+    public function disconnect();
 }

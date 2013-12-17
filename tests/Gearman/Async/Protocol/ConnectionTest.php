@@ -22,7 +22,7 @@ class ConnectionTest extends PHPUnit_Framework_TestCase
         $fac = new CommandFactory();
         $fac->addType($this->type);
 
-        $this->stream = $this->getMock('\React\Stream\Stream', ['write'], [], '', false);
+        $this->stream = $this->getMock('\React\Stream\Stream', ['write', 'close'], [], '', false);
         $this->connection = new Connection($this->stream, $fac);
         $this->packet = $fac->create(1, ["a" => "foo", "b" => 1]);
 
@@ -94,6 +94,14 @@ class ConnectionTest extends PHPUnit_Framework_TestCase
         ;
 
         $this->connection->send($this->packet);
+    }
+
+    public function testClose()
+    {
+        $this->stream->expects($this->once())
+            ->method('close');
+
+        $this->connection->close();
     }
 
 }

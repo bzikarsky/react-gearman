@@ -177,4 +177,10 @@ abstract class Participant extends EventEmitter
     {
         return $this->connection->getCommandFactory();
     }
+
+
+    public function disconnect()
+    {
+        $this->connection->close();
+    }
 }

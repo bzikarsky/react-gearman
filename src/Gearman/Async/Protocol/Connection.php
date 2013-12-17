@@ -133,4 +133,14 @@ class Connection extends EventEmitter
     {
         return $this->closed;
     }
+
+    /**
+     * Closes the connection
+     */
+    public function close()
+    {
+        if (!$this->isClosed()) {
+            $this->stream->close();
+        }
+    }
 }

@@ -24,11 +24,11 @@ class ClientTest extends PHPUnit_Framework_TestCase
         $stream = $this->getMock('\React\Stream\Stream', [], [], '', false);
         $this->factory = new \Gearman\Protocol\Binary\DefaultCommandFactory();
 
-        $this->connection = $this->getMock('\Gearman\Async\Protocol\Connection', ['send'], [$stream, $this->factory]);
+        $this->connection = $this->getMock('\Gearman\Async\Protocol\Connection', ['send', 'close'], [$stream, $this->factory]);
         $this->client = new Client($this->connection);
     }
 
-    public function testClose()
+    public function testCloseEvent()
     {
         $closeCalled = false;
         $this->client->on("close", function() use (&$closeCalled) {
@@ -423,6 +423,14 @@ class ClientTest extends PHPUnit_Framework_TestCase
         $this->respond("OPTION_RES", ["option_name" => ClientInterface::OPTION_FORWARD_EXCEPTIONS]);
         $expectedLog[] = "option";
         $this->assertEquals($expectedLog, $log);
+    }
+
+    public function testDisconnect()
+    {
+        $this->connection->expects($this->once())
+            ->method('close');
+
+        $this->client->disconnect();
     }
 
 }
