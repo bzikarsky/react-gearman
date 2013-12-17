@@ -2,8 +2,12 @@ language: php
 php:
   - 5.4
   - 5.5
-# Remove hhvm until https://github.com/facebook/hhvm/issues/1334 is fixed
-#  - hhvm
+  - hhvm
+  
+matrix:
+  allow_failures:
+    - php: hhvm
+    
 before_script:
   - composer self-update
   - composer install --dev

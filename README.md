@@ -5,7 +5,8 @@ A async Gearman implementation for PHP ontop of reactphp
 
 ## Current status:
 - There is only an implementation for a Gearmn-client
-- Code is only (!) unit-tested and adheres to http://gearman.org/protocol/ - There no integation tests with a existing Gearman server implementation yet
+- Code is only (!) unit-tested and adheres to http://gearman.org/protocol/ 
+- No real integration tests with gearmand yet. Some examples can be found in `examples`, they seem to work on my test-vm.
 
 ## Goals:
 - Implement GearmanWorker
