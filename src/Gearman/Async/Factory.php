@@ -44,18 +44,25 @@ class Factory
 
     public function createClient($host, $port)
     {
-        $stream = $this->connector->create($host, $port);
-        $connection = new Connection($stream, $this->commandFactory);
-        $client = new Client($connection);
-
+    
         $deferred = new Deferred();
+        $this->connector->create($host, $port)->then(
+            function($stream) use($deferred) {
+                $connection = new Connection($stream, $this->commandFactory);
+                $client = new Client($connection);
 
-        $client->ping()->then(
-            function() use ($deferred, $client){
-                $deferred->resolve($client);
+
+                $client->ping()->then(
+                    function() use ($deferred, $client){
+                        $deferred->resolve($client);
+                    },
+                    function() use ($deferred) {
+                        $deferred->reject("Initial test ping failed.");
+                    }
+                );
             },
-            function() use ($deferred) {
-                $deferred->reject("Initial test ping failed.");
+            function($error) use ($deferred) {
+                $deferred->reject("Stream connect failed: $error");
             }
         );
 
