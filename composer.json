@@ -12,7 +12,8 @@
         }
     },
     "require-dev": {
-        "satooshi/php-coveralls": "dev-master"
+        "satooshi/php-coveralls": "dev-master",
+        "phpunit/phpunit": "3.7.*"
     },
     "config": {
         "bin-dir": "bin"

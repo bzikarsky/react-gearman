@@ -1,6 +1,7 @@
 <?php
 
 namespace Gearman\Async;
+
 use Evenement\EventEmitterInterface;
 
 /**
