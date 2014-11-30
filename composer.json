@@ -1,8 +1,10 @@
 {
     "name": "gearman/gearman-async",
     "require": {
-        "php": ">=5.4",
-        "react/react": "dev-master",
+        "php": "~5.4",
+        "react/event-loop": "~0.4",
+        "react/stream": "~0.4",
+        "react/promise": "~2.0",
         "evenement/evenement": "~2.0"
     },
     "license": "MIT",
@@ -10,10 +12,6 @@
         "psr-0": {
             "Gearman": "src/"
         }
-    },
-    "require-dev": {
-        "satooshi/php-coveralls": "dev-master",
-        "phpunit/phpunit": "3.7.*"
     },
     "config": {
         "bin-dir": "bin"
