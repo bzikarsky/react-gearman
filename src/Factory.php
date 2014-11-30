@@ -26,14 +26,20 @@ class Factory
     protected $dnsResolver = null;
     protected $connector = null;
 
-    public function __construct(LoopInterface $eventLoop = null, Resolver $resolver = null, CommandFactoryInterface $commandFactory = null)
-    {
+    public function __construct(
+        LoopInterface $eventLoop = null,
+        Resolver $resolver = null,
+        CommandFactoryInterface $commandFactory = null
+    ) {
         $this->eventLoop = $eventLoop ?: EventLoopFactory::create();
         $this->commandFactory = $commandFactory ?: new DefaultCommandFactory();
 
         if (!$resolver) {
             $dnsResolverFactory = new ResolverFactory();
-            $resolver = $dnsResolverFactory->createCached(self::DEFAULT_NAMESERVER, $this->eventLoop);
+            $resolver = $dnsResolverFactory->createCached(
+                self::DEFAULT_NAMESERVER,
+                $this->eventLoop
+            );
         }
 
         $this->dnsResolver = $resolver;
@@ -42,12 +48,36 @@ class Factory
 
     public function createClient($host, $port)
     {
-
         $deferred = new Deferred();
         $this->connector->create($host, $port)->then(
             function ($stream) use ($deferred) {
                 $connection = new Connection($stream, $this->commandFactory);
                 $client = new Client($connection);
+
+                $client->ping()->then(
+                    function () use ($deferred, $client) {
+                        $deferred->resolve($client);
+                    },
+                    function () use ($deferred) {
+                        $deferred->reject("Initial test ping failed.");
+                    }
+                );
+            },
+            function ($error) use ($deferred) {
+                $deferred->reject("Stream connect failed: $error");
+            }
+        );
+
+        return $deferred->promise();
+    }
+
+    public function createWorker($host, $port)
+    {
+        $deferred = new Deferred();
+        $this->connector->create($host, $port)->then(
+            function ($stream) use ($deferred) {
+                $connection = new Connection($stream, $this->commandFactory);
+                $client = new Worker($connection);
 
                 $client->ping()->then(
                     function () use ($deferred, $client) {

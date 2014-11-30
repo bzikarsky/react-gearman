@@ -3,6 +3,9 @@
 namespace Zikarsky\React\Gearman;
 
 use Zikarsky\React\Gearman\Protocol\Connection;
+use Zikarsky\React\Gearman\Protocol\Participant;
+use Zikarsky\React\Gearman\Command\Binary\CommandInterface;
+
 
 class Worker extends Participant implements WorkerInterface
 {
@@ -20,6 +23,15 @@ class Worker extends Participant implements WorkerInterface
         // responses to a grabJob
         $this->getConnection()->on('NO_JOB', [$this, 'handleNoJob']);
         $this->getConnection()->on('JOB_ASSIGN', [$this, 'handleJob']);
+    }
+
+    public function setId($id)
+    {
+        $command = $this->getCommandFactory()->create('SET_CLIENT_ID', [
+            'worker_id' => $id
+        ]);
+
+        return $this->send($command);
     }
 
     public function register($function, callable $callback, $timeout = null)
@@ -107,14 +119,14 @@ class Worker extends Participant implements WorkerInterface
             throw new \LogicException("Got job for unknown function {$job->getFunction}");
         }
 
-        $callback = $this->function[$job->getFunction()];
+        $callback = $this->functions[$job->getFunction()];
         $this->emit('new-job', [$job, $this]);
 
         try {
             $result = $callback($job, $this);
-            return $this->sendJobComplete($job, $result);
+            $this->sendJobComplete($job, $result);
         } catch (\Exception $e) {
-            return $this->sendJobException($job, $e);
+            $this->sendJobException($job, $e);
         }
 
         $this->grabJob();
@@ -122,9 +134,52 @@ class Worker extends Participant implements WorkerInterface
 
     protected function sendJobComplete(JobInterface $job, $result)
     {
+        $command = $this->getCommandFactory()->create('WORK_COMPLETE', [
+            'job_handle'            => $job->getHandle(),
+            CommandInterface::DATA  => $result
+        ]);
+
+        $this->send($command);
     }
 
     protected function sendJobException(JobInterface $job, \Exception $e)
     {
+        $command = $this->getCommandFactory()->create('WORK_EXCEPTION', [
+            'job_handle'            => $job->getHandle(),
+            CommandInterface::DATA  => serialize($e)
+        ]);
+
+        $this->send($command);
+    }
+
+    public function sendJobStatus(JobInterface $job, $numerator, $denominator)
+    {
+        $command = $this->getCommandFactory()->create('WORK_STATUS', [
+            'job_handle'            => $job->getHandle(),
+            'complete_numerator'    => $numerator,
+            'complete_denominator'  => $denominator
+        ]);
+
+        $this->send($command);       
+    }
+
+    public function sendJobData(JobInterface $job, $data)
+    {
+        $command = $this->getCommandFactory()->create('WORK_DATA', [
+            'job_handle'            => $job->getHandle(),
+            CommandInterface::DATA  => $data
+        ]);
+
+        $this->send($command);
+    }
+
+    public function sendJobWarning(JobInterface $job, $warning)
+    {
+        $command = $this->getCommandFactory()->create('WORK_WARNING', [
+            'job_handle'            => $job->getHandle(),
+            CommandInterface::DATA  => $warning
+        ]);
+
+        $this->send($command);
     }
 }
