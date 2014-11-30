@@ -1,4 +1,4 @@
-gearman-async [![Build Status](https://travis-ci.org/bzikarsky/react-gearman.png?branch=master&style=flat-square)](https://travis-ci.org/bzikarsky/gearman-async)
+gearman-async [![Build Status](https://travis-ci.org/bzikarsky/react-gearman.png?branch=master&style=flat-square)](https://travis-ci.org/bzikarsky/react-gearman)
 =============
 
 A async Gearman implementation for PHP ontop of reactphp
