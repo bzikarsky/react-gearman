@@ -29,8 +29,8 @@ class CommandType
     /**
      * Creates a types
      *
-     * @param string $name
-     * @param integer $type
+     * @param string   $name
+     * @param integer  $type
      * @param string[] $arguments
      */
     public function __construct($name, $type, array $arguments = [])
@@ -83,7 +83,7 @@ class CommandType
     /**
      * Checks whether a certain argument is exists in this type
      *
-     * @param string $name
+     * @param  string $name
      * @return bool
      */
     public function hasArgument($name)

@@ -42,7 +42,7 @@ class ConnectionTest extends PHPUnit_Framework_TestCase
     public function testStreamClose()
     {
         $closeCalled = false;
-        $this->connection->on("close", function() use (&$closeCalled) {
+        $this->connection->on("close", function () use (&$closeCalled) {
             $closeCalled = true;
         });
 
@@ -65,7 +65,7 @@ class ConnectionTest extends PHPUnit_Framework_TestCase
     public function testHandledPacketEvent()
     {
         $testCalled = false;
-        $this->connection->on("TEST", function($event) use (&$testCalled) {
+        $this->connection->on("TEST", function ($event) use (&$testCalled) {
             $this->assertEquals($this->packet, $event);
             $testCalled = true;
         });
@@ -77,7 +77,7 @@ class ConnectionTest extends PHPUnit_Framework_TestCase
     public function testUnhandledPacketEvent()
     {
         $testCalled = false;
-        $this->connection->on("unhandled-command", function($event) use (&$testCalled) {
+        $this->connection->on("unhandled-command", function ($event) use (&$testCalled) {
             $this->assertEquals($this->packet, $event);
             $testCalled = true;
         });

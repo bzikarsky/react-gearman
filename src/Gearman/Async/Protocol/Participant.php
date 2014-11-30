@@ -6,7 +6,6 @@ use Evenement\EventEmitter;
 use Gearman\Protocol\Binary\CommandInterface;
 use Gearman\Protocol\Binary\CommandFactoryInterface;
 use Gearman\Protocol\Exception as ProtocolException;
-use React\Stream\Stream;
 use React\Promise\Promise;
 use React\Promise\Deferred;
 
@@ -43,14 +42,13 @@ abstract class Participant extends EventEmitter
         $this->connection->on('unhandled-command', function (CommandInterface $command) {
             throw new ProtocolException("Unexpected command packet: $command");
         });
-        $this->connection->on("ERROR", function(CommandInterface $command) {
+        $this->connection->on("ERROR", function (CommandInterface $command) {
             throw new ProtocolException("Protocol error: " . $command->get('message') . '(' . $command->get('code') . ')');
         });
-        $this->connection->on("close", function() {
+        $this->connection->on("close", function () {
             $this->emit("close", func_get_args());
         });
     }
-
 
     /**
      * Performs a blocking action (request<->response pattern)
@@ -58,9 +56,9 @@ abstract class Participant extends EventEmitter
      * This action sends the given command, and executes the handler upon receiving the defined event-name
      * All other sent commands are queued until the handler resolves the initial action-promise
      *
-     * @param CommandInterface $command
-     * @param string $eventName
-     * @param callable $handler
+     * @param  CommandInterface $command
+     * @param  string           $eventName
+     * @param  callable         $handler
      * @return Promise
      */
     protected function blockingAction(CommandInterface $command, $eventName, callable $handler)
@@ -96,8 +94,8 @@ abstract class Participant extends EventEmitter
      * A lock-promise can be passed in optionally. All subsequent calls to send() are then queued until the
      * promise resolves
      *
-     * @param CommandInterface $command
-     * @param Promise $lock
+     * @param  CommandInterface $command
+     * @param  Promise          $lock
      * @return Promise
      */
     protected function send(CommandInterface $command, Promise $lock = null)
@@ -118,8 +116,8 @@ abstract class Participant extends EventEmitter
      * Other commands are queued until an optional promise resolves (unlocks)
      *
      * @param CommandInterface $command
-     * @param Deferred $deferred
-     * @param Promise $lock
+     * @param Deferred         $deferred
+     * @param Promise          $lock
      */
     private function sendDeferred(CommandInterface $command, Deferred $deferred, Promise $lock = null)
     {
@@ -131,6 +129,7 @@ abstract class Participant extends EventEmitter
                     $this->sendDeferred($command, $deferred, $lock);
                 }
             );
+
             return;
         }
 
@@ -177,7 +176,6 @@ abstract class Participant extends EventEmitter
     {
         return $this->connection->getCommandFactory();
     }
-
 
     public function disconnect()
     {

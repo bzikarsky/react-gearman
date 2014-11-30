@@ -72,6 +72,7 @@ class Client extends Participant implements ClientInterface
             }
 
             $this->emit("ping", [$this]);
+
             return true;
         });
     }
@@ -81,9 +82,9 @@ class Client extends Participant implements ClientInterface
      * The promise resolves with a representing TaskInterface instance as soon the server
      * confirms the queuing of the task
      *
-     * @param string $function
-     * @param string $workload
-     * @param string $priority
+     * @param  string  $function
+     * @param  string  $workload
+     * @param  string  $priority
      * @return Promise
      */
     public function submit($function, $workload = "", $priority = TaskInterface::PRIORITY_NORMAL)
@@ -99,7 +100,6 @@ class Client extends Participant implements ClientInterface
             'id'            => "", // todo: purpose unclear - what does it do?
              CommandInterface::DATA   => $workload
         ]);
-
 
         $promise = $this->blockingAction(
             $command,
@@ -119,7 +119,6 @@ class Client extends Participant implements ClientInterface
             }
         );
 
-
         return $promise;
     }
 
@@ -133,7 +132,7 @@ class Client extends Participant implements ClientInterface
             'option_name' => $option
         ]);
 
-        return $this->blockingAction($command, 'OPTION_RES', function(CommandInterface $req, CommandInterface $res) {
+        return $this->blockingAction($command, 'OPTION_RES', function (CommandInterface $req, CommandInterface $res) {
             $option = $req->get('option_name');
             $success = $option == $res->get('option_name');
 
@@ -142,6 +141,7 @@ class Client extends Participant implements ClientInterface
             }
 
             $this->emit("option", [$option, $this]);
+
             return $option;
         });
     }
@@ -157,7 +157,7 @@ class Client extends Participant implements ClientInterface
         return $this->blockingAction(
             $command,
             "STATUS_RES",
-            function(CommandInterface $req, CommandInterface $res) use ($handle) {
+            function (CommandInterface $req, CommandInterface $res) use ($handle) {
                 if ($req->get('job_handle') != $res->get('job_handle')) {
                     throw new ProtocolException("Job handle of returned STATUS_RES does not match the requested one");
                 }
@@ -226,6 +226,5 @@ class Client extends Participant implements ClientInterface
             // @codeCoverageIgnoreEnd
         }
     }
-
 
 }

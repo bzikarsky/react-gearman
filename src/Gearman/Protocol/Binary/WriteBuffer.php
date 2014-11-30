@@ -42,7 +42,7 @@ class WriteBuffer
      * Shifts a number of bytes (default: all) from the beginning of the buffer
      * and returns them
      *
-     * @param int|null $numBytes
+     * @param  int|null                 $numBytes
      * @return string
      * @throws InvalidArgumentException
      * @throws OutOfBoundsException

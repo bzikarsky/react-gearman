@@ -53,7 +53,7 @@ class Connection extends EventEmitter
      * Creates the connection on top of the async stream and with the given
      * command-factory/specification
      *
-     * @param Stream $stream
+     * @param Stream                  $stream
      * @param CommandFactoryInterface $commandFactory
      */
     public function __construct(Stream $stream, CommandFactoryInterface $commandFactory)
@@ -64,13 +64,13 @@ class Connection extends EventEmitter
         $this->stream = $stream;
 
         // install event-listeners, end event is not of interest
-        $this->stream->on('data', function() {
+        $this->stream->on('data', function () {
             return call_user_func_array([$this, 'handleData'], func_get_args());
         });
         $this->stream->on('error', function ($error) {
             throw new ProtocolException("Stream-Error: $error");
         });
-        $this->stream->on('close', function() {
+        $this->stream->on('close', function () {
             $this->closed = true;
             $this->emit('close', [$this]);
         });
@@ -101,7 +101,7 @@ class Connection extends EventEmitter
     /**
      * Sends a command over the stream
      *
-     * @param CommandInterface $command
+     * @param  CommandInterface       $command
      * @throws BadMethodCallException when the connection is closed
      */
     public function send(CommandInterface $command)

@@ -31,7 +31,7 @@ class ClientTest extends PHPUnit_Framework_TestCase
     public function testCloseEvent()
     {
         $closeCalled = false;
-        $this->client->on("close", function() use (&$closeCalled) {
+        $this->client->on("close", function () use (&$closeCalled) {
             $closeCalled = true;
         });
 
@@ -84,7 +84,7 @@ class ClientTest extends PHPUnit_Framework_TestCase
         $task = $this->submit("function", "data");
         $event = null;
 
-        $task->on('status', function(TaskStatusEvent $ev) use (&$event) {
+        $task->on('status', function (TaskStatusEvent $ev) use (&$event) {
             $event = $ev;
         });
 
@@ -101,7 +101,7 @@ class ClientTest extends PHPUnit_Framework_TestCase
         $task = $this->submit("function", "data");
         $event = null;
 
-        $task->on('data', function(TaskDataEvent $ev) use (&$event) {
+        $task->on('data', function (TaskDataEvent $ev) use (&$event) {
             $event = $ev;
         });
 
@@ -117,7 +117,7 @@ class ClientTest extends PHPUnit_Framework_TestCase
         $task = $this->submit("function", "data");
         $event = null;
 
-        $task->on('warning', function(TaskDataEvent $ev) use (&$event) {
+        $task->on('warning', function (TaskDataEvent $ev) use (&$event) {
             $event = $ev;
         });
 
@@ -133,7 +133,7 @@ class ClientTest extends PHPUnit_Framework_TestCase
         $task = $this->submit("function", "data");
         $event = null;
 
-        $task->on('failure', function(TaskEvent $ev) use (&$event) {
+        $task->on('failure', function (TaskEvent $ev) use (&$event) {
             $event = $ev;
         });
 
@@ -148,7 +148,7 @@ class ClientTest extends PHPUnit_Framework_TestCase
         $task = $this->submit("function", "data");
         $event = null;
 
-        $task->on('exception', function(TaskDataEvent $ev) use (&$event) {
+        $task->on('exception', function (TaskDataEvent $ev) use (&$event) {
             $event = $ev;
         });
 
@@ -164,7 +164,7 @@ class ClientTest extends PHPUnit_Framework_TestCase
         $task = $this->submit("function", "data");
         $event = null;
 
-        $task->on('complete', function(TaskDataEvent $ev) use (&$event) {
+        $task->on('complete', function (TaskDataEvent $ev) use (&$event) {
             $event = $ev;
         });
 
@@ -188,7 +188,7 @@ class ClientTest extends PHPUnit_Framework_TestCase
                 return null;
             }));
 
-        $this->client->on('ping', function() use (&$pongEvent) {
+        $this->client->on('ping', function () use (&$pongEvent) {
             $pongEvent = true;
         });
 
@@ -227,7 +227,7 @@ class ClientTest extends PHPUnit_Framework_TestCase
             $eventTask = $createdTask;
         });
 
-        $this->client->submit($f, $data, $prio)->then(function($createdTask) use (&$promiseTask) {
+        $this->client->submit($f, $data, $prio)->then(function ($createdTask) use (&$promiseTask) {
            $promiseTask = $createdTask;
         });
         $this->respond("JOB_CREATED", ["job_handle" => "test.job"]);
@@ -249,11 +249,11 @@ class ClientTest extends PHPUnit_Framework_TestCase
         $confirmedEvent = false;
         $option = ClientInterface::OPTION_FORWARD_EXCEPTIONS;
 
-        $this->client->on('option', function() use (&$confirmedEvent) {
+        $this->client->on('option', function () use (&$confirmedEvent) {
            $confirmedEvent = true;
         });
 
-        $this->client->setOption($option)->then(function() use (&$confirmed) {
+        $this->client->setOption($option)->then(function () use (&$confirmed) {
            $confirmed = true;
         });
 
@@ -271,7 +271,7 @@ class ClientTest extends PHPUnit_Framework_TestCase
         $confirmed = false;
         $option = ClientInterface::OPTION_FORWARD_EXCEPTIONS;
 
-        $this->client->setOption($option)->then(function() use (&$confirmed) {
+        $this->client->setOption($option)->then(function () use (&$confirmed) {
             $confirmed = true;
         });
 
@@ -294,15 +294,15 @@ class ClientTest extends PHPUnit_Framework_TestCase
         $clientPromise = false;
         $clientEvent = true;
 
-        $this->client->on('status', function(TaskStatusEvent $status)  use (&$clientEvent) {
+        $this->client->on('status', function (TaskStatusEvent $status) use (&$clientEvent) {
             $clientEvent = true;
         });
 
-        $this->client->getStatus($task)->then(function(TaskStatusEvent $status) use (&$clientPromise) {
+        $this->client->getStatus($task)->then(function (TaskStatusEvent $status) use (&$clientPromise) {
             $clientPromise = true;
         });
 
-        $task->on('status', function(TaskStatusEvent $status) use (&$taskEvent, $task) {
+        $task->on('status', function (TaskStatusEvent $status) use (&$taskEvent, $task) {
             $taskEvent = true;
 
             $this->assertEquals($task, $status->getTask());
@@ -330,12 +330,12 @@ class ClientTest extends PHPUnit_Framework_TestCase
         $clientPromise = false;
         $clientEvent = true;
 
-        $this->client->on('status', function(TaskStatusEvent $status)  use (&$clientEvent) {
+        $this->client->on('status', function (TaskStatusEvent $status) use (&$clientEvent) {
             $clientEvent = true;
             $this->assertInstanceOf('\Gearman\Async\UnknownTask', $status->getTask());
         });
 
-        $this->client->getStatus('task')->then(function(TaskStatusEvent $status) use (&$clientPromise) {
+        $this->client->getStatus('task')->then(function (TaskStatusEvent $status) use (&$clientPromise) {
             $clientPromise = true;
             $this->assertInstanceOf('\Gearman\Async\UnknownTask', $status->getTask());
         });
@@ -392,16 +392,16 @@ class ClientTest extends PHPUnit_Framework_TestCase
                 return null;
             }));
 
-        $this->client->ping()->then(function() use (&$log) {
+        $this->client->ping()->then(function () use (&$log) {
             $log[] = "ping1";
         });
-        $this->client->ping()->then(function() use (&$log) {
+        $this->client->ping()->then(function () use (&$log) {
             $log[] = "ping2";
         });
-        $this->client->submit("test")->then(function() use (&$log) {
+        $this->client->submit("test")->then(function () use (&$log) {
             $log[] = 'submit';
         });
-        $this->client->setOption(ClientInterface::OPTION_FORWARD_EXCEPTIONS)->then(function() use (&$log) {
+        $this->client->setOption(ClientInterface::OPTION_FORWARD_EXCEPTIONS)->then(function () use (&$log) {
             $log[] = 'option';
         });
 

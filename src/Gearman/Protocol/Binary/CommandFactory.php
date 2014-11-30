@@ -46,7 +46,7 @@ class CommandFactory implements CommandFactoryInterface
     }
 
     /**
-     * @param integer $code
+     * @param  integer                  $code
      * @return CommandType
      * @throws InvalidArgumentException
      */
@@ -60,7 +60,7 @@ class CommandFactory implements CommandFactoryInterface
     }
 
     /**
-     * @param string $name
+     * @param  string      $name
      * @return CommandType
      *
      * @throws InvalidArgumentException
@@ -77,9 +77,9 @@ class CommandFactory implements CommandFactoryInterface
     /**
      * Creates a command
      *
-     * @param string|integer $type
-     * @param array $data
-     * @param string $magic
+     * @param  string|integer $type
+     * @param  array          $data
+     * @param  string         $magic
      * @return Command
      */
     public function create($type, array $data = [], $magic = CommandInterface::MAGIC_REQUEST)

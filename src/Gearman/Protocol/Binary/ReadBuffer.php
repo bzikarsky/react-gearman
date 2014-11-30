@@ -71,7 +71,7 @@ class ReadBuffer implements Countable
     /**
      * Push bytes into the buffer, returns whether full commands were read
      *
-     * @param string $bytes
+     * @param  string                   $bytes
      * @return bool
      * @throws InvalidArgumentException
      * @throws ProtocolException
@@ -154,7 +154,7 @@ class ReadBuffer implements Countable
     /**
      * Handles a package body
      *
-     * @param string $buffer
+     * @param  string            $buffer
      * @throws ProtocolException
      */
     protected function handleBody($buffer)

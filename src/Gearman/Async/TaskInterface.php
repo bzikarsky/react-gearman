@@ -40,7 +40,6 @@ interface TaskInterface extends EventEmitterInterface
      */
     public function getWorkload();
 
-
     /**
      * Returns the task's priority
      *

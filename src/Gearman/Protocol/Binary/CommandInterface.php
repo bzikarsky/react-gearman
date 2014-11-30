@@ -66,8 +66,8 @@ interface CommandInterface
      * Returns the command's argument-value
      * If the argument is not set yet, $default is returned
      *
-     * @param string $key
-     * @param null $default
+     * @param  string                   $key
+     * @param  null                     $default
      * @return mixed
      * @throws InvalidArgumentException
      */
@@ -76,8 +76,8 @@ interface CommandInterface
     /**
      * Set the command's argument to given value
      *
-     * @param string $key
-     * @param mixed $value
+     * @param  string                   $key
+     * @param  mixed                    $value
      * @throws InvalidArgumentException
      */
     public function set($key, $value);
@@ -86,7 +86,7 @@ interface CommandInterface
      * Returns all arguments as key => value pairs in defined order
      * If one argument has no value yet, $default is returned
      *
-     * @param null $default
+     * @param  null  $default
      * @return array
      */
     public function getAll($default = null);

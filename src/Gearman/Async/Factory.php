@@ -2,7 +2,6 @@
 
 namespace Gearman\Async;
 
-
 use Gearman\Async\Protocol\Connection;
 use Gearman\Protocol\Binary\CommandFactoryInterface;
 use React\Dns\Resolver\Resolver;
@@ -27,7 +26,6 @@ class Factory
     protected $dnsResolver = null;
     protected $connector = null;
 
-
     public function __construct(LoopInterface $eventLoop = null, Resolver $resolver = null, CommandFactoryInterface $commandFactory = null)
     {
         $this->eventLoop = $eventLoop ?: EventLoopFactory::create();
@@ -44,24 +42,23 @@ class Factory
 
     public function createClient($host, $port)
     {
-    
+
         $deferred = new Deferred();
         $this->connector->create($host, $port)->then(
-            function($stream) use($deferred) {
+            function ($stream) use ($deferred) {
                 $connection = new Connection($stream, $this->commandFactory);
                 $client = new Client($connection);
 
-
                 $client->ping()->then(
-                    function() use ($deferred, $client){
+                    function () use ($deferred, $client) {
                         $deferred->resolve($client);
                     },
-                    function() use ($deferred) {
+                    function () use ($deferred) {
                         $deferred->reject("Initial test ping failed.");
                     }
                 );
             },
-            function($error) use ($deferred) {
+            function ($error) use ($deferred) {
                 $deferred->reject("Stream connect failed: $error");
             }
         );
@@ -76,6 +73,5 @@ class Factory
     {
         return $this->eventLoop;
     }
-
 
 }

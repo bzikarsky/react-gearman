@@ -28,10 +28,10 @@ class TaskStatusEvent extends TaskEvent
 
     /**
      * @param TaskInterface $task
-     * @param boolean $known
-     * @param boolean $running
-     * @param integer $numerator
-     * @param integer $denominator
+     * @param boolean       $known
+     * @param boolean       $running
+     * @param integer       $numerator
+     * @param integer       $denominator
      */
     public function __construct(TaskInterface $task, $known, $running, $numerator, $denominator)
     {

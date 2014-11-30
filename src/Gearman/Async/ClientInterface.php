@@ -28,9 +28,9 @@ interface ClientInterface
      * Submits a task to the server, promise is resolved on task creation with a TaskInterface
      * Also the task-created event is fired
      *
-     * @param string    $function
-     * @param string    $workload
-     * @param string    $priority   defaults to TaskInterface::PRIORITY_NORMAL
+     * @param  string  $function
+     * @param  string  $workload
+     * @param  string  $priority defaults to TaskInterface::PRIORITY_NORMAL
      * @return Promise
      */
     public function submit($function, $workload, $priority);
@@ -39,7 +39,7 @@ interface ClientInterface
      * Sets an option for the client, promise is resolved when option is set with the option_name
      * Also the option event is fired
      *
-     * @param string $option
+     * @param  string  $option
      * @return Promise
      */
     public function setOption($option);
@@ -49,7 +49,7 @@ interface ClientInterface
      * Also the status event will be fired on the Client
      * If the task is known (was submitted on this client instance) the status event on the task will be emitted
      *
-     * @param string|TaskInterface  $task
+     * @param  string|TaskInterface $task
      * @return Promise
      */
     public function getStatus($task);
