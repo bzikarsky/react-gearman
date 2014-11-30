@@ -1,16 +1,18 @@
 {
-    "name": "gearman/gearman-async",
+    "name": "zikarsky/react-gearman",
     "require": {
         "php": "~5.4",
         "react/event-loop": "~0.4",
         "react/stream": "~0.4",
         "react/promise": "~2.0",
+        "react/dns": "~0.4",
+        "react/socket-client": "~0.4",
         "evenement/evenement": "~2.0"
     },
     "license": "MIT",
     "autoload": {
-        "psr-0": {
-            "Gearman": "src/"
+        "psr-4": {
+            "Zikarsky\\React\\Gearman\\": "src/"
         }
     },
     "config": {
