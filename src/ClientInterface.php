@@ -33,7 +33,7 @@ interface ClientInterface
      * @param  string  $priority defaults to TaskInterface::PRIORITY_NORMAL
      * @return Promise
      */
-    public function submit($function, $workload, $priority);
+    public function submit($function, $workload, $priority = TaskInterface::PRIORITY_NORMAL);
 
     /**
      * Sets an option for the client, promise is resolved when option is set with the option_name

@@ -5,6 +5,11 @@ namespace Zikarsky\React\Gearman;
 use Evenement\EventEmitterInterface;
 
 /**
+ * A representation of a Task on the client-side
+ *
+ * A task represents the work-package which is submitted to the
+ * job-server. It is updated with information from the worker
+ * with events.
  *
  * @event complete      TaskDataEvent $event, ClientInterface $client
  * @event status        TaskStatusEvent $event, ClientInterface $client

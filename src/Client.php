@@ -54,30 +54,6 @@ class Client extends Participant implements ClientInterface
     }
 
     /**
-     * Pings the server with random data, and expects a pong with the same information
-     * The returned promise is resolved with TRUE as soon the pong request hits the client
-     *
-     * @return Promise
-     */
-    public function ping()
-    {
-        $command = $this->getCommandFactory()->create("ECHO_REQ", [
-            CommandInterface::DATA => uniqid()
-        ]);
-
-        return $this->blockingAction($command,'ECHO_RES', function (CommandInterface $ping, CommandInterface $pong) {
-            $success = $ping->get(CommandInterface::DATA) == $pong->get(CommandInterface::DATA);
-            if (!$success) {
-                throw new ProtocolException("Ping response did not match ping request");
-            }
-
-            $this->emit("ping", [$this]);
-
-            return true;
-        });
-    }
-
-    /**
      * Submits the given work-request (function, workload) at the given priority
      * The promise resolves with a representing TaskInterface instance as soon the server
      * confirms the queuing of the task
@@ -96,9 +72,9 @@ class Client extends Participant implements ClientInterface
 
         $type = "SUBMIT_JOB" . ($priority == "" ? "" : "_" . strtoupper($priority));
         $command = $this->getCommandFactory()->create($type,[
-            'function_name' => $function,
-            'id'            => "", // todo: purpose unclear - what does it do?
-             CommandInterface::DATA   => $workload
+            'function_name'             => $function,
+            'id'                        => "", // todo: purpose unclear - what does it do?
+             CommandInterface::DATA     => $workload
         ]);
 
         $promise = $this->blockingAction(

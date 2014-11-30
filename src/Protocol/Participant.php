@@ -51,6 +51,30 @@ abstract class Participant extends EventEmitter
     }
 
     /**
+     * Pings the server with random data, and expects a pong with the same information
+     * The returned promise is resolved with TRUE as soon the pong request hits the client
+     *
+     * @return Promise
+     */
+    public function ping()
+    {
+        $command = $this->getCommandFactory()->create("ECHO_REQ", [
+            CommandInterface::DATA => uniqid()
+        ]);
+
+        return $this->blockingAction($command,'ECHO_RES', function (CommandInterface $ping, CommandInterface $pong) {
+            $success = $ping->get(CommandInterface::DATA) == $pong->get(CommandInterface::DATA);
+            if (!$success) {
+                throw new ProtocolException("Ping response did not match ping request");
+            }
+
+            $this->emit("ping", [$this]);
+
+            return true;
+        });
+    }
+
+    /**
      * Performs a blocking action (request<->response pattern)
      *
      * This action sends the given command, and executes the handler upon receiving the defined event-name
@@ -69,8 +93,8 @@ abstract class Participant extends EventEmitter
 
         // send command
         $this->send($command, $actionPromise)->then(
-        // as soon as the command is sent, register a one-time event-handler
-        // on the expected response event, which executes the handler
+            // as soon as the command is sent, register a one-time event-handler
+            // on the expected response event, which executes the handler
             function (CommandInterface $sentCommand) use ($deferred, $eventName, $handler) {
                 $this->connection->once($eventName, function (CommandInterface $recvCommand) use ($sentCommand, $deferred, $handler) {
 
