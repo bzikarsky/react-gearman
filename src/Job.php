@@ -51,13 +51,16 @@ class Job implements JobInterface
 
     public function sendStatus($numerator, $denominator)
     {
+        return $this->worker->sendJobStatus($this, $numerator, $denominator);
     }
 
     public function sendData($data)
     {
+        return $this->worker->sendJobData($this, $data);
     }
 
     public function sendWarning($warning)
     {
+        return $this->worker->sendJobWarning($this, $warning);
     }
 }
