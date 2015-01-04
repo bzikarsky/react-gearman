@@ -146,7 +146,7 @@ class Worker extends Participant implements WorkerInterface
     {
         $command = $this->getCommandFactory()->create('WORK_EXCEPTION', [
             'job_handle'            => $job->getHandle(),
-            CommandInterface::DATA  => serialize($e)
+            CommandInterface::DATA  => $e
         ]);
 
         $this->send($command);

@@ -46,6 +46,10 @@ class Command implements CommandInterface
             throw new InvalidArgumentException($this->type->getName() . "  does not have a $key argument");
         }
 
+        if (!is_scalar($value)) {
+            $value = serialize($value);
+        }
+
         $this->data[$key] = $value;
     }
 
@@ -55,7 +59,13 @@ class Command implements CommandInterface
             throw new InvalidArgumentException($this->type->getName() . "  does not have a $key argument");
         }
 
-        return isset($this->data[$key]) ? $this->data[$key] : $default;
+        $data = isset($this->data[$key]) ? $this->data[$key] : $default;
+        
+        if ($key == self::DATA && self::isSerialized($data)) {
+            $data = unserialize($data);
+        }
+
+        return $data;
     }
 
     public function getAll($default = null)
@@ -82,5 +92,9 @@ class Command implements CommandInterface
     {
         return $this->magic;
     }
-
+    
+    private static function isSerialized($data)
+    {
+        return $data == serialize(false) || @unserialize($data) !== false;
+    }
 }

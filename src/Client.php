@@ -65,11 +65,6 @@ class Client extends Participant implements ClientInterface
      */
     public function submit($function, $workload = "", $priority = TaskInterface::PRIORITY_NORMAL)
     {
-        $origWorkload = $workload;
-        if (!is_scalar($workload)) {
-            $workload = serialize($workload);
-        }
-
         $type = "SUBMIT_JOB" . ($priority == "" ? "" : "_" . strtoupper($priority));
         $command = $this->getCommandFactory()->create($type,[
             'function_name'             => $function,
@@ -80,10 +75,10 @@ class Client extends Participant implements ClientInterface
         $promise = $this->blockingAction(
             $command,
             "JOB_CREATED",
-            function (CommandInterface $submitCmd, CommandInterface $createdCmd) use ($origWorkload, $priority) {
+            function (CommandInterface $submitCmd, CommandInterface $createdCmd) use ($workload, $priority) {
                 $task = new Task(
                     $submitCmd->get('function_name'),
-                    $origWorkload,
+                    $workload,
                     $createdCmd->get('job_handle'),
                     $priority
                 );
@@ -169,7 +164,13 @@ class Client extends Participant implements ClientInterface
 
         switch ($command->getName()) {
             case "WORK_COMPLETE":
-                $task->emit('complete', [new TaskDataEvent($task, $command->get(CommandInterface::DATA)), $this]);
+                $task->emit('complete', [
+                    new TaskDataEvent(
+                        $task, 
+                        $command->get(CommandInterface::DATA)
+                    ), 
+                    $this
+                ]);
                 break;
             case "WORK_STATUS":
                 $task->emit('status', [
