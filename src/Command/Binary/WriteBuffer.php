@@ -23,7 +23,7 @@ class WriteBuffer
      */
     public function push(CommandInterface $command)
     {
-        $argv = array_values($command->getAll());
+        $argv = array_values($command->getAll(null, true));
         $body = implode(CommandInterface::ARGUMENT_DELIMITER, $argv);
 
         $this->buffer .= pack(

@@ -34,7 +34,7 @@ class Command implements CommandInterface
     public function __toString()
     {
         $values = array_map(function ($key) {
-            return $key . "=" . $this->get($key, "NULL");
+            return $key . "=" . $this->get($key, "NULL", true);
         }, $this->type->getArguments());
 
         return $this->type->__toString() . '[' . implode('&', $values) . ']';
@@ -53,7 +53,7 @@ class Command implements CommandInterface
         $this->data[$key] = $value;
     }
 
-    public function get($key, $default = null)
+    public function get($key, $default = null, $serialized = false)
     {
         if (!$this->type->hasArgument($key)) {
             throw new InvalidArgumentException($this->type->getName() . "  does not have a $key argument");
@@ -61,18 +61,18 @@ class Command implements CommandInterface
 
         $data = isset($this->data[$key]) ? $this->data[$key] : $default;
         
-        if ($key == self::DATA && self::isSerialized($data)) {
+        if ($serialized === false && $key == self::DATA && self::isSerialized($data)) {
             $data = unserialize($data);
         }
 
         return $data;
     }
 
-    public function getAll($default = null)
+    public function getAll($default = null, $serialized = false)
     {
         $args = [];
         foreach ($this->type->getArguments() as $arg) {
-            $args[$arg] = $this->get($arg, $default) ;
+            $args[$arg] = $this->get($arg, $default, $serialized) ;
         }
 
         return $args;
