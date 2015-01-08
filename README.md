@@ -1,9 +1,11 @@
-gearman-async [![Build Status](https://travis-ci.org/bzikarsky/react-gearman.png?branch=master&style=flat-square)](https://travis-ci.org/bzikarsky/react-gearman)
+gearman-async [![Latest Stable Version](https://img.shields.io/packagist/v/zikarsky/react-gearman.svg?style=flat-square)](https://packagist.org/packages/zikarsky/react-gearman) [![Total Downloads](https://img.shields.io/packagist/dt/zikarsky/react-gearman.svg?style=flat-square)](https://packagist.org/packages/zikarsky/react-gearman) 
 =============
+[![Build Status](https://img.shields.io/travis/bzikarsky/react-gearman.svg?style=flat-square)](https://travis-ci.org/bzikarsky/react-gearman)
 
 A async Gearman implementation for PHP ontop of reactphp
 
 ## Current status:
-- There is only an implementation for a Gearman-client
+- There is a working implementation for a GearmanClient
+- There is a partially working implementation for GearmanWorker - will be refactored
 - Code is unit-tested and adheres to http://gearman.org/protocol/ 
-- No real integration tests with gearmand yet. A working client example can be found in `examples`
+- No real integration tests with gearmand yet. Some examples can be found in `examples`
