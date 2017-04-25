@@ -1,7 +1,7 @@
 {
     "name": "zikarsky/react-gearman",
     "require": {
-        "php": "~5.4",
+        "php": ">=5.4",
         "react/event-loop": "~0.4",
         "react/stream": "~0.4",
         "react/promise": "~2.0",
