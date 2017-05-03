@@ -18,7 +18,7 @@ class DefaultCommandFactory extends CommandFactory
         $this->addType(new CommandType("JOB_ASSIGN",            11,  ['job_handle', 'function_name', Command::DATA]));
         $this->addType(new CommandType("WORK_STATUS",           12,  ['job_handle', 'complete_numerator', 'complete_denominator']));
         $this->addType(new CommandType("WORK_COMPLETE",         13,  ['job_handle', Command::DATA]));
-        $this->addType(new CommandType("WORK_FAIL",             14,  ['job_handle']));
+        $this->addType(new CommandType("WORK_FAIL",             14,  ['job_handle', Command::DATA]));
         $this->addType(new CommandType("GET_STATUS",            15,  ['job_handle']));
         $this->addType(new CommandType("ECHO_REQ",              16,  [Command::DATA]));
         $this->addType(new CommandType("ECHO_RES",              17,  [Command::DATA]));
