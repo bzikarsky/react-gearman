@@ -21,10 +21,13 @@ class ClientTest extends PHPUnit_Framework_TestCase
 
     public function setUp()
     {
-        $stream = $this->getMock('\React\Stream\Stream', [], [], '', false);
+        $stream = $this->createMock(\React\Stream\Stream::class);
         $this->factory = new \Zikarsky\React\Gearman\Command\Binary\DefaultCommandFactory();
 
-        $this->connection = $this->getMock('\Zikarsky\React\Gearman\Protocol\Connection', ['send', 'close'], [$stream, $this->factory]);
+        $this->connection = $this->getMockBuilder(\Zikarsky\React\Gearman\Protocol\Connection::class)
+            ->setMethods(['send', 'close'])
+            ->setConstructorArgs([$stream, $this->factory])
+            ->getMock();
         $this->client = new Client($this->connection);
     }
 

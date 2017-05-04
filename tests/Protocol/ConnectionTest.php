@@ -22,7 +22,10 @@ class ConnectionTest extends PHPUnit_Framework_TestCase
         $fac = new CommandFactory();
         $fac->addType($this->type);
 
-        $this->stream = $this->getMock('\React\Stream\Stream', ['write', 'close'], [], '', false);
+        $this->stream = $this->getMockBuilder(\React\Stream\Stream::class)
+            ->setMethods(['write', 'close'])
+            ->disableOriginalConstructor()
+            ->getMock();
         $this->connection = new Connection($this->stream, $fac);
         $this->packet = $fac->create(1, ["a" => "foo", "b" => 1]);
 
