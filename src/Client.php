@@ -154,7 +154,7 @@ class Client extends Participant implements ClientInterface
         );
     }
 
-    protected function handleWorkEvent(CommandInterface $command)
+    public function handleWorkEvent(CommandInterface $command)
     {
         if (!isset($this->tasks[$command->get('job_handle')])) {
             throw new ProtocolException("Unexpected $command. Task unknown");

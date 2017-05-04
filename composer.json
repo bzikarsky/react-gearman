@@ -9,6 +9,9 @@
         "react/socket-client": "~0.4",
         "evenement/evenement": "~2.0"
     },
+    "require-dev": {
+        "phpunit/phpunit": "^5.3"
+    },
     "license": "MIT",
     "autoload": {
         "psr-4": {

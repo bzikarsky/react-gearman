@@ -13,13 +13,13 @@ class JobTest extends PHPUnit_Framework_TestCase
 
     public function setUp()
     {
-        $this->worker = $this->getMock('\Zikarsky\React\Gearman\Worker', [], [], '', false);
+        $this->worker = $this->createMock('\Zikarsky\React\Gearman\Worker', [], [], '', false);
         $this->job = new Job($this->worker, "foo-function", "bar-handle", "workload");
     }
 
     public function testFromCommandConstructor()
     {
-        $command = $this->getMock('\Zikarsky\React\Gearman\Command\Binary\CommandInterface');
+        $command = $this->createMock('\Zikarsky\React\Gearman\Command\Binary\CommandInterface');
         $command->expects($this->any())->method('getName')->will($this->returnValue('JOB_ASSIGN'));
         $command->expects($this->exactly(3))->method('get')->will($this->returnValueMap([
             ['function_name', null, 'foo-function'],
@@ -35,7 +35,7 @@ class JobTest extends PHPUnit_Framework_TestCase
      */
     public function testInvalidFromCommandConstructor()
     {
-        $command = $this->getMock('\Zikarsky\React\Gearman\Command\Binary\CommandInterface');
+        $command = $this->createMock('\Zikarsky\React\Gearman\Command\Binary\CommandInterface');
         $command->expects($this->any())->method('getName')->will($this->returnValue('NO_JOB'));
 
         Job::fromCommand($command, $this->worker);
