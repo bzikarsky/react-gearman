@@ -9,10 +9,17 @@ use React\Promise\Promise;
  *
  * It's the interface to update the client with information about the job's
  * status.
+ *
+ * @event status-change $status, JobInterface fires when the job's status changes
  */
 interface JobInterface
 {
-    /**
+    const STATUS_RUNNING = "running";
+    const STATUS_COMPLETED = "completed";
+    const STATUS_FAILED = "failed";
+
+
+   /**
      * Get the function-name of this job
      *
      * @return string
