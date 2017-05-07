@@ -60,8 +60,8 @@ class Command implements CommandInterface
         }
 
         $data = isset($this->data[$key]) ? $this->data[$key] : $default;
-        
-        if ($serialized === false && $key == self::DATA && self::isSerialized($data)) {
+
+        if (false === $serialized && $key == self::DATA && self::isSerialized($data)) {
             $data = unserialize($data);
         }
 
@@ -72,7 +72,7 @@ class Command implements CommandInterface
     {
         $args = [];
         foreach ($this->type->getArguments() as $arg) {
-            $args[$arg] = $this->get($arg, $default, $serialized) ;
+            $args[$arg] = $this->get($arg, $default, $serialized);
         }
 
         return $args;
