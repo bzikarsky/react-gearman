@@ -34,7 +34,7 @@ class Worker extends Participant implements WorkerInterface
         return $this->send($command);
     }
 
-    public function register($function, callable $callback, $timeout = null)
+    public function register($function, callable $callback = null, $timeout = null)
     {
         $type = 'CAN_DO';
         $data = ['function_name' => $function];
@@ -113,73 +113,26 @@ class Worker extends Participant implements WorkerInterface
 
     protected function handleJob(CommandInterface $command)
     {
-        $job = Job::FromCommand($command, $this);
+        $job = Job::FromCommand($command, function ($command, array $payload) {
+            return $this->send($this->getCommandFactory()->create($command, $payload));
+        });
 
         if (!isset($this->functions[$job->getFunction()])) {
             throw new \LogicException("Got job for unknown function {$job->getFunction}");
         }
 
-        $callback = $this->functions[$job->getFunction()];
+        // grab next job, when this one is completed or failed
+        $job->on('status-change', function($status, JobInterface $job) {
+            if (in_array($status, [JobInterface::STATUS_COMPLETED, JobInterface::STATUS_FAILED])) {
+                $this->grabJob();
+            }
+        });
+
+        // announce new job and call callback if registered
         $this->emit('new-job', [$job, $this]);
-
-        try {
-            $result = $callback($job, $this);
-            $this->sendJobComplete($job, $result);
-        } catch (\Exception $e) {
-            $this->sendJobException($job, $e);
+        $callback = $this->functions[$job->getFunction()];
+        if (is_callable($callback)) {
+            $callback($job);
         }
-
-        $this->grabJob();
-    }
-
-    protected function sendJobComplete(JobInterface $job, $result)
-    {
-        $command = $this->getCommandFactory()->create('WORK_COMPLETE', [
-            'job_handle'            => $job->getHandle(),
-            CommandInterface::DATA  => $result
-        ]);
-
-        $this->send($command);
-    }
-
-    protected function sendJobException(JobInterface $job, \Exception $e)
-    {
-        $command = $this->getCommandFactory()->create('WORK_EXCEPTION', [
-            'job_handle'            => $job->getHandle(),
-            CommandInterface::DATA  => $e
-        ]);
-
-        $this->send($command);
-    }
-
-    public function sendJobStatus(JobInterface $job, $numerator, $denominator)
-    {
-        $command = $this->getCommandFactory()->create('WORK_STATUS', [
-            'job_handle'            => $job->getHandle(),
-            'complete_numerator'    => $numerator,
-            'complete_denominator'  => $denominator
-        ]);
-
-        $this->send($command);       
-    }
-
-    public function sendJobData(JobInterface $job, $data)
-    {
-        $command = $this->getCommandFactory()->create('WORK_DATA', [
-            'job_handle'            => $job->getHandle(),
-            CommandInterface::DATA  => $data
-        ]);
-
-        $this->send($command);
-    }
-
-    public function sendJobWarning(JobInterface $job, $warning)
-    {
-        $command = $this->getCommandFactory()->create('WORK_WARNING', [
-            'job_handle'            => $job->getHandle(),
-            CommandInterface::DATA  => $warning
-        ]);
-
-        $this->send($command);
     }
 }

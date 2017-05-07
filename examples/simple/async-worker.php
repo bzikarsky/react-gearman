@@ -17,7 +17,8 @@ $factory->createWorker("127.0.0.1", 4730)->then(
         $worker->register('reverse', function(JobInterface $job) {
             echo "Job: ", $job->getHandle(), ": ", $job->getFunction(), 
                  " with ", $job->getWorkload(), "\n";
-            return strrev($job->getWorkload());
+
+            $job->complete(strrev($job->getWorkload()));
         });
     },
     // error-handler
