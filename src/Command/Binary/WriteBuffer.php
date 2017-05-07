@@ -57,7 +57,7 @@ class WriteBuffer
         $numBytes = $numBytes === null ? $bufLen : intval($numBytes);
 
         if ($numBytes > $bufLen) {
-            throw new OutOfBoundsException("Requested byte coutn exceeds buffer length");
+            throw new OutOfBoundsException("Requested byte count exceeds buffer length");
         }
 
         if ($bufLen == $numBytes) {
