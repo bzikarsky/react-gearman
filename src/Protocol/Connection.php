@@ -8,6 +8,8 @@ use Zikarsky\React\Gearman\Command\Binary\CommandInterface;
 use Zikarsky\React\Gearman\Command\Binary\ReadBuffer;
 use Zikarsky\React\Gearman\Command\Binary\WriteBuffer;
 use Zikarsky\React\Gearman\Command\Exception as ProtocolException;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use React\Stream\Stream;
 use BadMethodCallException;
 
@@ -50,6 +52,11 @@ class Connection extends EventEmitter
     protected $closed = false;
 
     /**
+     * @var LoggerInterface
+     */
+    protected $logger = null;
+
+    /**
      * Creates the connection on top of the async stream and with the given
      * command-factory/specification
      *
@@ -62,6 +69,7 @@ class Connection extends EventEmitter
         $this->writeBuffer  = new WriteBuffer();
         $this->readBuffer   = new ReadBuffer($commandFactory);
         $this->stream = $stream;
+        $this->logger = new NullLogger();
 
         // install event-listeners, end event is not of interest
         $this->stream->on('data', function () {
@@ -77,6 +85,15 @@ class Connection extends EventEmitter
     }
 
     /**
+     * Sets a protocol logger
+     * @param LoggerInterface $logger
+     */
+    public function setLogger(LoggerInterface $logger)
+    {
+        $this->logger = $logger;
+    }
+
+    /**
      * Handles incoming data (in byte form) and emits commands when fully read
      *
      * @param string $data
@@ -87,6 +104,8 @@ class Connection extends EventEmitter
 
         while (count($this->readBuffer)) {
             $command = $this->readBuffer->shift();
+            $this->logger->info("< $command");
+
             $event = $command->getName();
             $eventArgs = [$command, $this];
 
@@ -110,6 +129,7 @@ class Connection extends EventEmitter
             throw new BadMethodCallException("Connection is closed. Cannot send commands anymore");
         }
 
+        $this->logger->info("> $command");
         $this->writeBuffer->push($command);
         $this->stream->write($this->writeBuffer->shift());
     }
