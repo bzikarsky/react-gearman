@@ -11,6 +11,7 @@ use Zikarsky\React\Gearman\Command\Exception as ProtocolException;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use React\Stream\Stream;
+use React\Promise\Deferred;
 use BadMethodCallException;
 
 /**
@@ -128,10 +129,16 @@ class Connection extends EventEmitter
         if ($this->isClosed()) {
             throw new BadMethodCallException("Connection is closed. Cannot send commands anymore");
         }
-
+        
+        $deferred = new Deferred();
         $this->logger->info("> $command");
         $this->writeBuffer->push($command);
         $this->stream->write($this->writeBuffer->shift());
+        $this->stream->getBuffer()->on('full-drain', function() use ($deferred) {
+            $deferred->resolve();
+        });
+
+        return $deferred->promise();
     }
 
     /**

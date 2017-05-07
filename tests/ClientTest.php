@@ -1,13 +1,13 @@
 <?php
 
 use Zikarsky\React\Gearman\Client;
-
 use Zikarsky\React\Gearman\TaskInterface;
 use Zikarsky\React\Gearman\Command\Binary\CommandInterface;
 use Zikarsky\React\Gearman\Event\TaskStatusEvent;
 use Zikarsky\React\Gearman\Event\TaskDataEvent;
 use Zikarsky\React\Gearman\Event\TaskEvent;
 use Zikarsky\React\Gearman\ClientInterface;
+use React\Promise\FulfilledPromise;
 
 class ClientTest extends PHPUnit_Framework_TestCase
 {
@@ -25,6 +25,7 @@ class ClientTest extends PHPUnit_Framework_TestCase
         $this->factory = new \Zikarsky\React\Gearman\Command\Binary\DefaultCommandFactory();
 
         $this->connection = $this->getMock('\Zikarsky\React\Gearman\Protocol\Connection', ['send', 'close'], [$stream, $this->factory]);
+        $this->connection->expects($this->any())->method('send')->will($this->returnValue(new FulfilledPromise()));
         $this->client = new Client($this->connection);
     }
 
@@ -185,7 +186,7 @@ class ClientTest extends PHPUnit_Framework_TestCase
             ->method('send')
             ->will($this->returnCallback(function ($ping) use (&$pongData) {
                 $pongData = $ping->get(CommandInterface::DATA);
-                return null;
+                return new FulfilledPromise();
             }));
 
         $this->client->on('ping', function () use (&$pongEvent) {
@@ -386,10 +387,10 @@ class ClientTest extends PHPUnit_Framework_TestCase
             ->method('send')
             ->will($this->returnCallback(function ($ping) use (&$pongData) {
                 if ($ping->getName() != "ECHO_REQ") {
-                    return;
+                    return new FulfilledPromise();
                 }
                 $pongData = $ping->get(CommandInterface::DATA);
-                return null;
+                return new FulfilledPromise();
             }));
 
         $this->client->ping()->then(function () use (&$log) {

@@ -175,10 +175,10 @@ abstract class Participant extends EventEmitter
         }
 
         // write the command
-        $this->connection->send($command);
-
-        // resolve the the promise to send the data
-        $deferred->resolve($command);
+        $this->connection->send($command)->then(function() use ($deferred, $command) {
+            // resolve the the promise to send the data
+            $deferred->resolve($command);
+        });
     }
 
     /**
