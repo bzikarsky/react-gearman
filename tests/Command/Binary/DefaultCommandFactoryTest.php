@@ -1,6 +1,5 @@
 <?php
 
-
 class DefaultCommandFactoryTest extends PHPUnit_Framework_TestCase
 {
 
@@ -24,4 +23,20 @@ class DefaultCommandFactoryTest extends PHPUnit_Framework_TestCase
         }
     }
 
+    public function testWorkFailCommand()
+    {
+        $jobHandle = 'H:toto:42';
+        $length = strlen($jobHandle) + 1;
+        $type = 14;
+        $rawCommand = "\x00RES".pack('N', $type).pack('N', $length).$jobHandle."\x00";
+
+        $factory = new \Zikarsky\React\Gearman\Command\Binary\DefaultCommandFactory();
+
+        $readBuffer = new \Zikarsky\React\Gearman\Command\Binary\ReadBuffer($factory);
+
+        $this->assertEquals(1, $readBuffer->push($rawCommand));
+        $command = $readBuffer->shift();
+        $this->assertEquals($type, $command->getType());
+        $this->assertEquals($jobHandle, $command->get('job_handle'), "Job handles are not the equals.");
+    }
 }
