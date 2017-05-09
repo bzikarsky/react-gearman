@@ -18,6 +18,10 @@ class DefaultCommandFactory extends CommandFactory
         $this->addType(new CommandType("JOB_ASSIGN",            11,  ['job_handle', 'function_name', Command::DATA]));
         $this->addType(new CommandType("WORK_STATUS",           12,  ['job_handle', 'complete_numerator', 'complete_denominator']));
         $this->addType(new CommandType("WORK_COMPLETE",         13,  ['job_handle', Command::DATA]));
+        /*
+         * WORK_FAIL should have only 1 argument : job_handle, but a bug? in gearman server send a \0 at the end of this response.
+         * A workaround is to consider that there are 2 arguments (as other WORK_* responses), the second one should be always empty.
+         */
         $this->addType(new CommandType("WORK_FAIL",             14,  ['job_handle', Command::DATA]));
         $this->addType(new CommandType("GET_STATUS",            15,  ['job_handle']));
         $this->addType(new CommandType("ECHO_REQ",              16,  [Command::DATA]));
