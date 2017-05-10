@@ -2,30 +2,40 @@
 
 namespace Zikarsky\React\Gearman;
 
+use React\Socket\ConnectorInterface;
+use React\SocketClient\DnsConnector;
+use React\SocketClient\TcpConnector;
 use Zikarsky\React\Gearman\Protocol\Connection;
 use Zikarsky\React\Gearman\Command\Binary\CommandFactoryInterface;
 use React\Dns\Resolver\Resolver;
 use React\EventLoop\LoopInterface;
 use React\EventLoop\Factory as EventLoopFactory;
 use Zikarsky\React\Gearman\Command\Binary\DefaultCommandFactory;
-use React\Dns\Resolver\Factory as ResolverFactory;
 use React\Promise\Deferred;
-use React\SocketClient\Connector;
 
 class Factory
 {
-
-    const DEFAULT_NAMESERVER = "8.8.8.8";
-
     protected $commandFactory = null;
 
     /**
      * @var LoopInterface
      */
     protected $eventLoop = null;
-    protected $dnsResolver = null;
+
+    /**
+     * @var ConnectorInterface
+     */
     protected $connector = null;
 
+    /**
+     * Factory for gearman server's connection.
+     * Passing a dns resolver is optional. Using it without a resolver may cause an exception
+     * caused by React\SocketClient\TcpConnector.
+     *
+     * @param LoopInterface|null $eventLoop
+     * @param Resolver|null $resolver an optional dns resolver
+     * @param CommandFactoryInterface|null $commandFactory
+     */
     public function __construct(
         LoopInterface $eventLoop = null,
         Resolver $resolver = null,
@@ -34,16 +44,11 @@ class Factory
         $this->eventLoop = $eventLoop ?: EventLoopFactory::create();
         $this->commandFactory = $commandFactory ?: new DefaultCommandFactory();
 
-        if (!$resolver) {
-            $dnsResolverFactory = new ResolverFactory();
-            $resolver = $dnsResolverFactory->createCached(
-                self::DEFAULT_NAMESERVER,
-                $this->eventLoop
-            );
+        if ($resolver !== null) {
+            $this->connector = new DnsConnector(new TcpConnector($this->eventLoop), $resolver);
+        } else {
+            $this->connector = new TcpConnector($this->eventLoop);
         }
-
-        $this->dnsResolver = $resolver;
-        $this->connector = new Connector($this->eventLoop, $this->dnsResolver);
     }
 
     public function createClient($host, $port)
