@@ -6,7 +6,7 @@
         "react/stream": "0.4.*",
         "react/promise": "~2.0",
         "react/dns": "0.4.*",
-        "react/socket-client": "0.4.*",
+        "react/socket-client": "^0.5",
         "evenement/evenement": "~2.0",
         "psr/log": "~1.0"
     },
