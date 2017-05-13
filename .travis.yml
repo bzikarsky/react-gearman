@@ -11,7 +11,7 @@ before_script:
 
 script:
   - bin/phpunit --coverage-text 
-  - bin/php-cs-fixer --dry-run --diff -vv
+  - bin/php-cs-fixer fix --dry-run --diff -vv
 
 notifications:
   email:
