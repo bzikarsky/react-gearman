@@ -121,5 +121,4 @@ class ReadBufferTest extends PHPUnit_Framework_TestCase
     {
         $this->buf->push($this->brokenPacketStr);
     }
-
 }

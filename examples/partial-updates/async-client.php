@@ -12,16 +12,15 @@ $factory = new Factory();
 
 $factory->createClient("127.0.0.1", 4730)->then(
     // on successful creation
-    function (ClientInterface $client)  {
-
+    function (ClientInterface $client) {
         $hosts = ['google.com', 'facebook.com', 'github.com', 'wikipedia.org'];
-        $client->submit("ping", $hosts)->then(function(TaskInterface $task) {
-            printf("Pinging: %s [handle:%s]\n", 
-                implode(", ", $task->getWorkload()), 
+        $client->submit("ping", $hosts)->then(function (TaskInterface $task) {
+            printf("Pinging: %s [handle:%s]\n",
+                implode(", ", $task->getWorkload()),
                 $task->getHandle()
             );
             
-            $task->on('data', function(TaskDataEvent $event) {
+            $task->on('data', function (TaskDataEvent $event) {
                 echo "Partial update:\n";
                 print_r($event->getData());
             });
@@ -34,11 +33,10 @@ $factory->createClient("127.0.0.1", 4730)->then(
         });
     },
     // error-handler
-    function($error) {
+    function ($error) {
         echo "Error: $error\n";
     }
 );
 
 
 $factory->getEventLoop()->run();
-

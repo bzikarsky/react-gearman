@@ -4,7 +4,6 @@ use Zikarsky\React\Gearman\TaskInterface;
 
 class TaskTest extends PHPUnit_Framework_TestCase
 {
-
     public function testTaskGetters()
     {
         $task = new \Zikarsky\React\Gearman\Task("function", "workload", "handle", TaskInterface::PRIORITY_NORMAL);
@@ -24,5 +23,4 @@ class TaskTest extends PHPUnit_Framework_TestCase
         $this->assertEquals("handle", $task->getHandle());
         $this->assertNull($task->getPriority());
     }
-
 }

@@ -232,7 +232,7 @@ class ClientTest extends PHPUnit_Framework_TestCase
         });
 
         $this->client->submit($f, $data, $prio)->then(function ($createdTask) use (&$promiseTask) {
-           $promiseTask = $createdTask;
+            $promiseTask = $createdTask;
         });
         $this->respond("JOB_CREATED", ["job_handle" => "test.job"]);
 
@@ -254,11 +254,11 @@ class ClientTest extends PHPUnit_Framework_TestCase
         $option = ClientInterface::OPTION_FORWARD_EXCEPTIONS;
 
         $this->client->on('option', function () use (&$confirmedEvent) {
-           $confirmedEvent = true;
+            $confirmedEvent = true;
         });
 
         $this->client->setOption($option)->then(function () use (&$confirmed) {
-           $confirmed = true;
+            $confirmed = true;
         });
 
         $this->respond("OPTION_RES", ['option_name' => $option]);
@@ -436,5 +436,4 @@ class ClientTest extends PHPUnit_Framework_TestCase
 
         $this->client->disconnect();
     }
-
 }

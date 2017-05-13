@@ -6,7 +6,6 @@ use Zikarsky\React\Gearman\TaskInterface;
 
 class TaskDataEvent extends TaskEvent
 {
-
     protected $data = "";
 
     public function __construct(TaskInterface $task, $data)
@@ -20,5 +19,4 @@ class TaskDataEvent extends TaskEvent
     {
         return $this->data;
     }
-
 }

@@ -28,9 +28,9 @@ class Job extends EventEmitter implements JobInterface
         }
 
         return new self(
-            $sender, 
-            $command->get('function_name'), 
-            $command->get('job_handle'), 
+            $sender,
+            $command->get('function_name'),
+            $command->get('job_handle'),
             $command->get(CommandInterface::DATA)
         );
     }
@@ -86,8 +86,8 @@ class Job extends EventEmitter implements JobInterface
 
     public function fail($error = null)
     {
-        return null === $error 
-            ? $this->sendError() 
+        return null === $error
+            ? $this->sendError()
             : $this->sendException($error);
     }
 
@@ -143,5 +143,4 @@ class Job extends EventEmitter implements JobInterface
             throw new \RuntimeException("Job is not in status {$this->status} instead of {$status}");
         }
     }
-
 }

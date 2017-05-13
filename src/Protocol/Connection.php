@@ -134,7 +134,7 @@ class Connection extends EventEmitter
         $this->logger->info("> $command");
         $this->writeBuffer->push($command);
         $this->stream->write($this->writeBuffer->shift());
-        $this->stream->getBuffer()->on('full-drain', function() use ($deferred) {
+        $this->stream->getBuffer()->on('full-drain', function () use ($deferred) {
             $deferred->resolve();
         });
 

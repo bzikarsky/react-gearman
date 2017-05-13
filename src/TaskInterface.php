@@ -51,5 +51,4 @@ interface TaskInterface extends EventEmitterInterface
      * @return string
      */
     public function getPriority();
-
 }

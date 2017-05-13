@@ -66,7 +66,7 @@ class Client extends Participant implements ClientInterface
     public function submit($function, $workload = "", $priority = TaskInterface::PRIORITY_NORMAL)
     {
         $type = "SUBMIT_JOB" . ($priority == "" ? "" : "_" . strtoupper($priority));
-        $command = $this->getCommandFactory()->create($type,[
+        $command = $this->getCommandFactory()->create($type, [
             'function_name'             => $function,
             'id'                        => "", // todo: purpose unclear - what does it do?
              CommandInterface::DATA     => $workload
@@ -166,9 +166,9 @@ class Client extends Participant implements ClientInterface
             case "WORK_COMPLETE":
                 $task->emit('complete', [
                     new TaskDataEvent(
-                        $task, 
+                        $task,
                         $command->get(CommandInterface::DATA)
-                    ), 
+                    ),
                     $this
                 ]);
                 break;
@@ -203,5 +203,4 @@ class Client extends Participant implements ClientInterface
             // @codeCoverageIgnoreEnd
         }
     }
-
 }

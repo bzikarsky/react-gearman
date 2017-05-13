@@ -18,37 +18,34 @@ $worker->addFunction('ping', 'my_ping');
 # Try to grab a job
 while (@$worker->work() ||
        $worker->returnCode() == GEARMAN_IO_WAIT ||
-       $worker->returnCode() == GEARMAN_NO_JOBS)
-{
-  if ($worker->returnCode() == GEARMAN_SUCCESS)
-    continue;
+       $worker->returnCode() == GEARMAN_NO_JOBS) {
+    if ($worker->returnCode() == GEARMAN_SUCCESS) {
+        continue;
+    }
 
-  if (!@$worker->wait())
-  {
-    if ($worker->returnCode() == GEARMAN_NO_ACTIVE_FDS)
-    {
-      # We are not connected to any servers, so wait a bit before
+    if (!@$worker->wait()) {
+        if ($worker->returnCode() == GEARMAN_NO_ACTIVE_FDS) {
+            # We are not connected to any servers, so wait a bit before
       # trying to reconnect.
       sleep(5);
-      continue;
+            continue;
+        }
+        break;
     }
-    break;
-  }
 }
 
 echo "Worker Error: " . $worker->error() . "\n";
 
 function my_ping($job)
 {
-  $hosts = unserialize($job->workload());
-  $result = [];
-  foreach ($hosts as $host) {
-    echo "ping: $host\n";
-    $result[$host] =  trim(`ping -c 2 -q $host | grep rtt`);
-    $job->sendStatus(count($result), count($hosts));
-    $job->sendData(serialize($result));
-  }
+    $hosts = unserialize($job->workload());
+    $result = [];
+    foreach ($hosts as $host) {
+        echo "ping: $host\n";
+        $result[$host] =  trim(`ping -c 2 -q $host | grep rtt`);
+        $job->sendStatus(count($result), count($hosts));
+        $job->sendData(serialize($result));
+    }
 
-  return serialize($result);
+    return serialize($result);
 }
-

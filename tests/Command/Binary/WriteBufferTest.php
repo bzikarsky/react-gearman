@@ -96,5 +96,4 @@ class WriteBufferTest extends PHPUnit_Framework_TestCase
     {
         $this->buf->shift(-1);
     }
-
 }

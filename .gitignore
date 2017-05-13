@@ -1,3 +1,8 @@
+# Composer local files
 /vendor/
 /bin/
 composer.lock
+
+# PHP CS Fixer local files
+.php_cs
+.php_cs.cache

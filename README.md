@@ -10,3 +10,16 @@ A async Gearman implementation for PHP ontop of reactphp
 - There is a partially working implementation for GearmanWorker - will be refactored
 - Code is unit-tested and adheres to http://gearman.org/protocol/ 
 - No real integration tests with gearmand yet. Some examples can be found in `examples`
+
+
+## Development
+
+Your PRs and changes are very welcome! 
+
+Please run tests and fix code-style with:
+
+- `bin/phpunit`
+- `bin/php-cs-fixer fix`
+
+If you want to check code-style before fixing it, run `bin/php-cs-fixer fix --dry-run --diff`
+

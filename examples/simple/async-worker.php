@@ -14,15 +14,15 @@ $factory->createWorker("127.0.0.1", 4730)->then(
     // on successful creation
     function (WorkerInterface $worker) {
         $worker->setId('Test-Client/' . getmypid());
-        $worker->register('reverse', function(JobInterface $job) {
-            echo "Job: ", $job->getHandle(), ": ", $job->getFunction(), 
+        $worker->register('reverse', function (JobInterface $job) {
+            echo "Job: ", $job->getHandle(), ": ", $job->getFunction(),
                  " with ", $job->getWorkload(), "\n";
 
             $job->complete(strrev($job->getWorkload()));
         });
     },
     // error-handler
-    function($error) {
+    function ($error) {
         echo "Error: $error\n";
     }
 );

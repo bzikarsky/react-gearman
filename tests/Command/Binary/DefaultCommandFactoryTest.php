@@ -2,7 +2,6 @@
 
 class DefaultCommandFactoryTest extends PHPUnit_Framework_TestCase
 {
-
     private static $maxTypeId = 36;
     private static $minTypeId = 1;
     private static $missingTypes = [

@@ -100,6 +100,4 @@ class CommandTest extends PHPUnit_Framework_TestCase
         $this->command->set("arg2", "abc");
         $this->assertEquals("TEST(1)[arg1=1&arg2=abc]", (string) $this->command);
     }
-
-
 }

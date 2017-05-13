@@ -19,5 +19,4 @@ interface CommandFactoryInterface
      * @return CommandInterface
      */
     public function create($type, array $data = [], $magic = CommandInterface::MAGIC_REQUEST);
-
 }

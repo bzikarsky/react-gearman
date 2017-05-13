@@ -1,0 +1,21 @@
+<?php
+
+$finder = PhpCsFixer\Finder::create()
+    // Exclude the command-list: The non-conforming whitespace allows for better readability
+    // File should be checked for other violations manually
+    ->notPath('Command/Binary/DefaultCommandFactory.php')
+
+    // Add directories
+    ->in(__DIR__ . '/src')
+    ->in(__DIR__ . '/tests')
+    ->in(__DIR__ . '/examples')
+
+;
+
+return PhpCsFixer\Config::create()
+    ->setRules([
+        '@PSR2' => true
+    ])
+    ->setUsingCache(false)
+    ->setFinder($finder)
+;

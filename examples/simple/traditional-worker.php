@@ -19,29 +19,26 @@ $worker->addFunction('reverse', 'reverse_fn');
 # Try to grab a job
 while (@$worker->work() ||
        $worker->returnCode() == GEARMAN_IO_WAIT ||
-       $worker->returnCode() == GEARMAN_NO_JOBS)
-{
-  if ($worker->returnCode() == GEARMAN_SUCCESS)
-    continue;
+       $worker->returnCode() == GEARMAN_NO_JOBS) {
+    if ($worker->returnCode() == GEARMAN_SUCCESS) {
+        continue;
+    }
 
-  echo "Waiting for next job...\n";
-  if (!@$worker->wait())
-  {
-    if ($worker->returnCode() == GEARMAN_NO_ACTIVE_FDS)
-    {
-      # We are not connected to any servers, so wait a bit before
+    echo "Waiting for next job...\n";
+    if (!@$worker->wait()) {
+        if ($worker->returnCode() == GEARMAN_NO_ACTIVE_FDS) {
+            # We are not connected to any servers, so wait a bit before
       # trying to reconnect.
       sleep(5);
-      continue;
+            continue;
+        }
+        break;
     }
-    break;
-  }
 }
 
 echo "Worker Error: " . $worker->error() . "\n";
 
 function reverse_fn($job)
 {
-  return strrev($job->workload());
+    return strrev($job->workload());
 }
-

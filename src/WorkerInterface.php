@@ -31,10 +31,10 @@ interface WorkerInterface
 
     /**
      * Register a function on the job-server
-     * 
-     * The passed $callback is executed when a task for this function is 
-     * received. $callback is called with JobInterface $job and 
-     * WorkerInterface $worker. 
+     *
+     * The passed $callback is executed when a task for this function is
+     * received. $callback is called with JobInterface $job and
+     * WorkerInterface $worker.
      *
      * An optional $timeout in seconds can be defined after which the server
      * assumes the job to be timed out.

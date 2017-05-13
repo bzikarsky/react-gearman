@@ -62,7 +62,7 @@ abstract class Participant extends EventEmitter
             CommandInterface::DATA => uniqid()
         ]);
 
-        return $this->blockingAction($command,'ECHO_RES', function (CommandInterface $ping, CommandInterface $pong) {
+        return $this->blockingAction($command, 'ECHO_RES', function (CommandInterface $ping, CommandInterface $pong) {
             $success = $ping->get(CommandInterface::DATA) == $pong->get(CommandInterface::DATA);
             if (!$success) {
                 throw new ProtocolException("Ping response did not match ping request");
@@ -175,7 +175,7 @@ abstract class Participant extends EventEmitter
         }
 
         // write the command
-        $this->connection->send($command)->then(function() use ($deferred, $command) {
+        $this->connection->send($command)->then(function () use ($deferred, $command) {
             // resolve the the promise to send the data
             $deferred->resolve($command);
         });

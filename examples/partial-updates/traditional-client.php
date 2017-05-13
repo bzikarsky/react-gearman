@@ -6,12 +6,12 @@ $client = new GearmanClient();
 $client->addServer();
 
 
-$client->setDataCallback(function($task) {
+$client->setDataCallback(function ($task) {
     echo "Partial update:\n";
     print_r(unserialize($task->data()));
 });
 
-$client->setCompleteCallback(function($task) {
+$client->setCompleteCallback(function ($task) {
     echo "Final result:\n";
     print_r(unserialize($task->data()));
 });
@@ -23,4 +23,3 @@ echo "Pinging: ", implode(', ', $hosts), ":\n";
 
 
 $client->runTasks();
-

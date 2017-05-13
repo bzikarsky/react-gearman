@@ -4,10 +4,8 @@ use Zikarsky\React\Gearman\Job;
 use Zikarsky\React\Gearman\Command\Binary\CommandInterface;
 use React\Promise\Deferred;
 
-
 class JobTest extends PHPUnit_Framework_TestCase
 {
-
     protected $worker;
     protected $job;
 

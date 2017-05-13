@@ -6,10 +6,8 @@ use Zikarsky\React\Gearman\Protocol\Connection;
 use Zikarsky\React\Gearman\Protocol\Participant;
 use Zikarsky\React\Gearman\Command\Binary\CommandInterface;
 
-
 class Worker extends Participant implements WorkerInterface
 {
-
     protected $functions = [];
 
     public function __construct(Connection $connection)
@@ -41,7 +39,7 @@ class Worker extends Participant implements WorkerInterface
 
         if ($timeout !== null) {
             $type .= '_TIMEOUT';
-            $data['timeout'] = intval($timeout); 
+            $data['timeout'] = intval($timeout);
         }
 
         $command = $this->getCommandFactory()->create($type, $data);
@@ -50,7 +48,7 @@ class Worker extends Participant implements WorkerInterface
         // as soon the function is registered:
         //  1) we now officially know about this function
         //  2)  let's check if there is work for us
-        $promise->then(function() use ($function, $callback) {
+        $promise->then(function () use ($function, $callback) {
             $this->functions[$function] = $callback;
             $this->grabJob();
         });
@@ -67,7 +65,7 @@ class Worker extends Participant implements WorkerInterface
         $command = $this->getCommandFactory->create("CANT_DO", ['function_name' => $function]);
         $promise = $this->send($command);
 
-        $promise->then(function() use ($function) {
+        $promise->then(function () use ($function) {
             unset($this->functions[$function]);
             $this->grabJob();
         });
@@ -80,7 +78,7 @@ class Worker extends Participant implements WorkerInterface
         $command = $this->getCommandFactory()->create('RESET_ABILITIES');
         $promise = $this->send($command);
 
-        $promise->then(function() {
+        $promise->then(function () {
             $this->functions = [];
         });
 
@@ -122,7 +120,7 @@ class Worker extends Participant implements WorkerInterface
         }
 
         // grab next job, when this one is completed or failed
-        $job->on('status-change', function($status, JobInterface $job) {
+        $job->on('status-change', function ($status, JobInterface $job) {
             if (in_array($status, [JobInterface::STATUS_COMPLETED, JobInterface::STATUS_FAILED])) {
                 $this->grabJob();
             }

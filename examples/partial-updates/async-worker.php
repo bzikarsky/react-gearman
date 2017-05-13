@@ -16,11 +16,11 @@ $factory->createWorker("127.0.0.1", 4730)->then(
     // on successful creation
     function (WorkerInterface $worker) use ($factory) {
         $worker->setId('Test-Client/' . getmypid());
-        $worker->register('ping', function(JobInterface $job) {
+        $worker->register('ping', function (JobInterface $job) {
             $result = [];
             $hosts  = $job->getWorkload();
 
-            $pingHost = function() use (&$hosts, &$result, $job, &$pingHost) {
+            $pingHost = function () use (&$hosts, &$result, $job, &$pingHost) {
                 $host = array_shift($hosts);
                 echo "ping: $host\n";
                 $result[$host] = trim(`ping -c 2 -q $host | grep rtt`);
@@ -39,7 +39,7 @@ $factory->createWorker("127.0.0.1", 4730)->then(
         });
     },
     // error-handler
-    function($error) {
+    function ($error) {
         echo "Error: $error\n";
     }
 );

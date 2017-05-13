@@ -13,10 +13,10 @@ $factory = new Factory();
 $factory->createClient("127.0.0.1", 4730)->then(
     // on successful creation
     function (ClientInterface $client) {
-        $client->submit("reverse", "Hallo Welt!")->then(function(TaskInterface $task) {
-            printf("Submitted: %s with \"%s\" [handle: %s]\n", 
-                $task->getFunction(), 
-                $task->getWorkload(), 
+        $client->submit("reverse", "Hallo Welt!")->then(function (TaskInterface $task) {
+            printf("Submitted: %s with \"%s\" [handle: %s]\n",
+                $task->getFunction(),
+                $task->getWorkload(),
                 $task->getHandle()
             );
             
@@ -27,10 +27,9 @@ $factory->createClient("127.0.0.1", 4730)->then(
         });
     },
     // error-handler
-    function($error) {
+    function ($error) {
         echo "Error: $error\n";
     }
 );
 
 $factory->getEventLoop()->run();
-

@@ -86,5 +86,4 @@ class CommandFactory implements CommandFactoryInterface
     {
         return new Command($this->getType($type), $data, $magic);
     }
-
 }

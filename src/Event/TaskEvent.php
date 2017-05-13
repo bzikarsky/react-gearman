@@ -29,5 +29,4 @@ class TaskEvent implements TaskEventInterface
     {
         return $this->task;
     }
-
 }

@@ -52,5 +52,4 @@ class DefaultCommandFactory extends CommandFactory
         // This is not currently used and may be removed. {@see http://gearman.org/protocol/}
         // $this->addType(new CommandType("SUBMIT_JOB_EPOCH",      36, ['function_name', 'id', 'epoch', Command::DATA]));
     }
-
 }

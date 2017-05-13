@@ -2,7 +2,6 @@
 
 class TaskStatusEventTest extends PHPUnit_Framework_TestCase
 {
-
     public function testPercentage()
     {
         $e = new \Zikarsky\React\Gearman\Event\TaskStatusEvent(
@@ -15,5 +14,4 @@ class TaskStatusEventTest extends PHPUnit_Framework_TestCase
 
         $this->assertEquals(5/10, $e->getCompletionPercentage());
     }
-
 }

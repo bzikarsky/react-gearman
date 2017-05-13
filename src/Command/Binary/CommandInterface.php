@@ -111,5 +111,4 @@ interface CommandInterface
      * @return string
      */
     public function getMagic();
-
 }

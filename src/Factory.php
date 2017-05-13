@@ -108,5 +108,4 @@ class Factory
     {
         return $this->eventLoop;
     }
-
 }
