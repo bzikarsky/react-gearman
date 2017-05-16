@@ -161,11 +161,15 @@ class ReadBuffer implements Countable
     {
         // split buffer into arguments
         $args = array_keys($this->currentCommand->getAll());
-        $argv = strlen($buffer) ? explode(CommandInterface::ARGUMENT_DELIMITER, $buffer, count($args)) : [];
+        $argv = strlen($buffer) ? explode(CommandInterface::ARGUMENT_DELIMITER, $buffer) : [];
 
         // validate argument-count vs expected argument count
-        if (count($args) != count($argv)) {
+        if (count($args) > count($argv)) {
             throw new ProtocolException("Invalid package-header: header.size bytes did not contain full package body");
+        }
+        // ignore any data after the last allowed \0. See https://github.com/gearman/gearmand/issues/108
+        if (count($args) < count($argv)) {
+            $argv = array_slice($argv, 0, count($args));
         }
 
         // save arguments
