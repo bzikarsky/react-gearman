@@ -122,8 +122,8 @@ class ReadBuffer implements Countable
     {
         $len = strlen($buffer);
 
-         // @codeCoverageIgnoreStart
-         // This is an internal safeguard which is not testable
+        // @codeCoverageIgnoreStart
+        // This is an internal safeguard which is not testable
         if ($len != $this->requiredBytes) {
             throw new InvalidArgumentException("Expected a string with length of $this->requiredBytes. Got $len bytes");
         }

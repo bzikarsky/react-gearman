@@ -26,8 +26,8 @@ while (@$worker->work() ||
     if (!@$worker->wait()) {
         if ($worker->returnCode() == GEARMAN_NO_ACTIVE_FDS) {
             # We are not connected to any servers, so wait a bit before
-      # trying to reconnect.
-      sleep(5);
+            # trying to reconnect.
+            sleep(5);
             continue;
         }
         break;
