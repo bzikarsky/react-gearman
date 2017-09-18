@@ -19,11 +19,11 @@ interface JobInterface
     const STATUS_FAILED = "failed";
 
 
-   /**
-     * Get the function-name of this job
-     *
-     * @return string
-     */
+    /**
+      * Get the function-name of this job
+      *
+      * @return string
+      */
     public function getFunction();
 
     /**

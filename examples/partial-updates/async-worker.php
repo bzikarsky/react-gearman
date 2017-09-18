@@ -18,7 +18,7 @@ $factory->createWorker("127.0.0.1", 4730)->then(
         $worker->setId('Test-Client/' . getmypid());
         $worker->register('ping', function (JobInterface $job) {
             $result = [];
-            $hosts  = $job->getWorkload();
+            $hosts  = unserialize($job->getWorkload());
 
             $pingHost = function () use (&$hosts, &$result, $job, &$pingHost) {
                 $host = array_shift($hosts);

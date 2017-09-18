@@ -5,7 +5,7 @@ use Zikarsky\React\Gearman\Event\TaskDataEvent;
 use Zikarsky\React\Gearman\JobInterface;
 use Zikarsky\React\Gearman\Factory;
 
-require_once __DIR__ . "/../vendor/autoload.php";
+require_once __DIR__ . "/../../vendor/autoload.php";
 
 // use default options
 $factory = new Factory();

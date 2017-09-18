@@ -46,14 +46,10 @@ class Command implements CommandInterface
             throw new InvalidArgumentException($this->type->getName() . "  does not have a $key argument");
         }
 
-        if (!is_scalar($value)) {
-            $value = serialize($value);
-        }
-
         $this->data[$key] = $value;
     }
 
-    public function get($key, $default = null, $serialized = false)
+    public function get($key, $default = null)
     {
         if (!$this->type->hasArgument($key)) {
             throw new InvalidArgumentException($this->type->getName() . "  does not have a $key argument");
@@ -61,18 +57,14 @@ class Command implements CommandInterface
 
         $data = isset($this->data[$key]) ? $this->data[$key] : $default;
 
-        if (false === $serialized && $key == self::DATA && self::isSerialized($data)) {
-            $data = unserialize($data);
-        }
-
         return $data;
     }
 
-    public function getAll($default = null, $serialized = false)
+    public function getAll($default = null)
     {
         $args = [];
         foreach ($this->type->getArguments() as $arg) {
-            $args[$arg] = $this->get($arg, $default, $serialized);
+            $args[$arg] = $this->get($arg, $default);
         }
 
         return $args;
@@ -91,10 +83,5 @@ class Command implements CommandInterface
     public function getMagic()
     {
         return $this->magic;
-    }
-    
-    private static function isSerialized($data)
-    {
-        return $data == serialize(false) || @unserialize($data) !== false;
     }
 }
