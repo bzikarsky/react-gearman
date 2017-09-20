@@ -64,4 +64,20 @@ interface JobInterface
      * @return Promise
      */
     public function sendWarning($warning);
+
+    /**
+     * Sends the result data and marks job as completed
+     *
+     * @param null $data
+     * @return mixed
+     */
+    public function complete($data = null);
+
+    /**
+     * Fails the job with optional error message
+     *
+     * @param null $error
+     * @return mixed
+     */
+    public function fail($error = null);
 }
