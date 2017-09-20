@@ -10,6 +10,16 @@ class Worker extends Participant implements WorkerInterface
 {
     protected $functions = [];
 
+    /**
+     * @var int
+     */
+    protected $maxParallelRequests = 1;
+
+    /**
+     * @var int
+     */
+    protected $inflightRequests = 0;
+
     public function __construct(Connection $connection)
     {
         parent::__construct($connection);
@@ -21,6 +31,18 @@ class Worker extends Participant implements WorkerInterface
         // responses to a grabJob
         $this->getConnection()->on('NO_JOB', [$this, 'handleNoJob']);
         $this->getConnection()->on('JOB_ASSIGN', [$this, 'handleJob']);
+    }
+
+    /**
+     * To make full use of async I/O, jobs can be accepted and processed in parallel
+     * {$$maxParallelRequests} limits the number of jobs that are accepted from
+     * the gearman server before an active job has to complete or fail
+     *
+     * @param int $maxParallelRequests
+     */
+    public function setMaxParallelRequests($maxParallelRequests)
+    {
+        $this->maxParallelRequests = $maxParallelRequests;
     }
 
     public function setId($id)
@@ -99,14 +121,25 @@ class Worker extends Participant implements WorkerInterface
 
     protected function grabJob()
     {
+        $this->inflightRequests++;
+
         $grab = $this->getCommandFactory()->create('GRAB_JOB');
         $this->send($grab);
     }
 
     protected function handleNoJob()
     {
+        $this->inflightRequests--;
+
         $preSleep = $this->getCommandFactory()->create('PRE_SLEEP');
         $this->send($preSleep);
+    }
+
+    protected function grabJobIfAvailable()
+    {
+        if ($this->inflightRequests < $this->maxParallelRequests) {
+            $this->grabJob();
+        }
     }
 
     protected function handleJob(CommandInterface $command)
@@ -122,9 +155,12 @@ class Worker extends Participant implements WorkerInterface
         // grab next job, when this one is completed or failed
         $job->on('status-change', function ($status, JobInterface $job) {
             if (in_array($status, [JobInterface::STATUS_COMPLETED, JobInterface::STATUS_FAILED])) {
-                $this->grabJob();
+                $this->inflightRequests--;
+                $this->grabJobIfAvailable();
             }
         });
+
+        $this->grabJobIfAvailable();
 
         // announce new job and call callback if registered
         $this->emit('new-job', [$job, $this]);
