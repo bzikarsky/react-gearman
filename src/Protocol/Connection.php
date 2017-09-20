@@ -58,6 +58,11 @@ class Connection extends EventEmitter
     protected $logger = null;
 
     /**
+     * @var Deferred[]
+     */
+    protected $commandSendQueue = [];
+
+    /**
      * Creates the connection on top of the async stream and with the given
      * command-factory/specification
      *
@@ -82,6 +87,12 @@ class Connection extends EventEmitter
         $this->stream->on('close', function () {
             $this->closed = true;
             $this->emit('close', [$this]);
+        });
+        $this->stream->getBuffer()->on('full-drain', function () {
+            foreach ($this->commandSendQueue as $deferred) {
+                $deferred->resolve();
+            }
+            $this->commandSendQueue = [];
         });
     }
 
@@ -123,6 +134,7 @@ class Connection extends EventEmitter
      *
      * @param  CommandInterface       $command
      * @throws BadMethodCallException when the connection is closed
+     * @return \React\Promise\Promise|\React\Promise\PromiseInterface
      */
     public function send(CommandInterface $command)
     {
@@ -134,9 +146,7 @@ class Connection extends EventEmitter
         $this->logger->info("> $command");
         $this->writeBuffer->push($command);
         $this->stream->write($this->writeBuffer->shift());
-        $this->stream->getBuffer()->on('full-drain', function () use ($deferred) {
-            $deferred->resolve();
-        });
+        $this->commandSendQueue[] = $deferred;
 
         return $deferred->promise();
     }

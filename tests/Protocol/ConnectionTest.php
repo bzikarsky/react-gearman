@@ -26,6 +26,8 @@ class ConnectionTest extends PHPUnit_Framework_TestCase
             ->setMethods(['write', 'close', 'getBuffer'])
             ->disableOriginalConstructor()
             ->getMock();
+        $buffer = $this->createMock(\React\Stream\Buffer::class);
+        $this->stream->expects($this->any())->method('getBuffer')->willReturn($buffer);
         $this->connection = new Connection($this->stream, $fac);
         $this->packet = $fac->create(1, ["a" => "foo", "b" => 1]);
 
@@ -94,16 +96,6 @@ class ConnectionTest extends PHPUnit_Framework_TestCase
         $this->stream->expects($this->once())
             ->method('write')
             ->with($this->equalTo($this->packetStr))
-        ;
-        $buffer = $this->getMockBuilder(\React\Stream\Buffer::class)
-            ->disableOriginalConstructor()
-            ->getMock();
-        $buffer->expects($this->once())
-            ->method('on')
-            ->with($this->equalTo('full-drain'));
-        $this->stream->expects($this->once())
-            ->method('getBuffer')
-            ->willReturn($buffer)
         ;
 
         $this->connection->send($this->packet);
