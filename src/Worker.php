@@ -34,6 +34,14 @@ class Worker extends Participant implements WorkerInterface
     }
 
     /**
+     * @return int
+     */
+    public function getInflightRequests()
+    {
+        return $this->inflightRequests;
+    }
+
+    /**
      * To make full use of async I/O, jobs can be accepted and processed in parallel
      * {$$maxParallelRequests} limits the number of jobs that are accepted from
      * the gearman server before an active job has to complete or fail
@@ -123,6 +131,11 @@ class Worker extends Participant implements WorkerInterface
     {
         $this->inflightRequests++;
 
+        $this->grabJobSend();
+    }
+
+    protected function grabJobSend()
+    {
         $grab = $this->getCommandFactory()->create('GRAB_JOB');
         $this->send($grab);
     }
@@ -149,7 +162,7 @@ class Worker extends Participant implements WorkerInterface
         });
 
         if (!isset($this->functions[$job->getFunction()])) {
-            throw new \LogicException("Got job for unknown function {$job->getFunction}");
+            throw new \LogicException("Got job for unknown function {$job->getFunction()}");
         }
 
         // grab next job, when this one is completed or failed

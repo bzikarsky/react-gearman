@@ -68,7 +68,7 @@ class CommandFactory implements CommandFactoryInterface
     public function getTypeByName($name)
     {
         if (!is_string($name) || !isset($this->typesByName[$name])) {
-            throw new InvalidArgumentException(__METHOD__  . ' requires $name to be a CommandType identifying name-string');
+            throw new InvalidArgumentException(__METHOD__  . " requires $name to be a CommandType identifying name-string");
         }
 
         return $this->typesByName[$name];
