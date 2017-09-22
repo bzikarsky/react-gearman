@@ -20,7 +20,7 @@ interface WorkerInterface
      * @return Promise
      */
     public function setId($id);
-    
+
     /**
      * Pings the server, promise is resolved on pong.
      * Also the ping event is fired
@@ -39,9 +39,9 @@ interface WorkerInterface
      * An optional $timeout in seconds can be defined after which the server
      * assumes the job to be timed out.
      *
-     * @param  string   $function
+     * @param  string $function
      * @param  callable $callback
-     * @param  int      $timeout  timeout in seconds, optional, defaults to null
+     * @param  int $timeout timeout in seconds, optional, defaults to null
      * @return Promise
      */
     public function register($function, callable $callback, $timeout = null);
@@ -75,4 +75,10 @@ interface WorkerInterface
      * Disconnects the worker from the server
      */
     public function disconnect();
+
+    /**
+     * @param $maxParallelRequests
+     * @return mixed
+     */
+    public function setMaxParallelRequests($maxParallelRequests);
 }
