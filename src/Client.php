@@ -39,6 +39,8 @@ class Client extends Participant implements ClientInterface
      */
     protected $tasks = [];
 
+    protected $uniqueTasks = [];
+
     /**
      * Creates the client on top of the given connection
      *
@@ -54,38 +56,115 @@ class Client extends Participant implements ClientInterface
     }
 
     /**
+     * @param $handle
+     * @return null|TaskInterface
+     */
+    protected function getTaskByHandle($handle)
+    {
+        if (isset($this->tasks[$handle])) {
+            return $this->tasks[$handle];
+        }
+
+        return null;
+    }
+
+    protected function checkUniqueTasks($function, $uniqueId)
+    {
+        if ($uniqueId !== "" && isset($this->uniqueTasks[$function . ';' . $uniqueId])) {
+            throw new DuplicateJobException("Job with unique id already submitted");
+        }
+
+        $this->uniqueTasks[$function . ';' . $uniqueId] = true;
+    }
+
+    protected function setTaskDone(TaskInterface $task)
+    {
+        unset($this->tasks[$task->getHandle()]);
+
+        if ($task->getUniqueId() !== '') {
+            unset($this->uniqueTasks[$task->getFunction() . ';' . $task->getUniqueId()]);
+        }
+    }
+
+    /**
      * Submits the given work-request (function, workload) at the given priority
      * The promise resolves with a representing TaskInterface instance as soon the server
      * confirms the queuing of the task
      *
-     * @param  string  $function
-     * @param  string  $workload
-     * @param  string  $priority
+     * @param string $function
+     * @param string $workload
+     * @param string $priority
+     * @param string $uniqueId
      * @return Promise
      */
-    public function submit($function, $workload = "", $priority = TaskInterface::PRIORITY_NORMAL)
+    public function submit($function, $workload = "", $priority = TaskInterface::PRIORITY_NORMAL, $uniqueId = "")
     {
+        $this->checkUniqueTasks($function, $uniqueId);
+
         $type = "SUBMIT_JOB" . ($priority == "" ? "" : "_" . strtoupper($priority));
         $command = $this->getCommandFactory()->create($type, [
-            'function_name'             => $function,
-            'id'                        => "", // todo: purpose unclear - what does it do?
-             CommandInterface::DATA     => $workload
+            'function_name' => $function,
+            'id' => $uniqueId,
+            CommandInterface::DATA => $workload
         ]);
 
         $promise = $this->blockingAction(
             $command,
             "JOB_CREATED",
-            function (CommandInterface $submitCmd, CommandInterface $createdCmd) use ($workload, $priority) {
+            function (CommandInterface $submitCmd, CommandInterface $createdCmd) use ($workload, $priority, $uniqueId) {
+                $handle = $createdCmd->get('job_handle');
                 $task = new Task(
                     $submitCmd->get('function_name'),
                     $workload,
                     $createdCmd->get('job_handle'),
-                    $priority
+                    $priority,
+                    $uniqueId
                 );
 
-                $this->tasks[$task->getHandle()] = $task;
+                $this->tasks[$handle] = $task;
+
                 $this->emit("task-submitted", [$task, $this]);
 
+                return $task;
+            }
+        );
+
+        return $promise;
+    }
+
+    /**
+     * Submits the given work-request (function, workload) at the given priority
+     * The promise resolves with a representing TaskInterface instance as soon the server
+     * confirms the queuing of the task
+     *
+     * @param $function
+     * @param string $workload
+     * @param string $priority
+     * @param string $uniqueId
+     * @return Promise
+     */
+    public function submitBackground($function, $workload = "", $priority = TaskInterface::PRIORITY_NORMAL, $uniqueId = "")
+    {
+        $type = "SUBMIT_JOB" . ($priority == "" ? "" : "_" . strtoupper($priority)) . "_BG";
+        $command = $this->getCommandFactory()->create($type, [
+            'function_name' => $function,
+            'id' => $uniqueId,
+            CommandInterface::DATA => $workload
+        ]);
+
+        $promise = $this->blockingAction(
+            $command,
+            "JOB_CREATED",
+            function (CommandInterface $submitCmd, CommandInterface $createdCmd) use ($workload, $priority, $uniqueId) {
+                $task = new Task(
+                    $submitCmd->get('function_name'),
+                    $workload,
+                    $createdCmd->get('job_handle'),
+                    $priority,
+                    $uniqueId
+                );
+
+                $this->emit("task-submitted", [$task, $this]);
                 return $task;
             }
         );
@@ -128,23 +207,24 @@ class Client extends Participant implements ClientInterface
         return $this->blockingAction(
             $command,
             "STATUS_RES",
-            function (CommandInterface $req, CommandInterface $res) use ($handle) {
+            function (CommandInterface $req, CommandInterface $res) use ($handle, $task) {
                 if ($req->get('job_handle') != $res->get('job_handle')) {
                     throw new ProtocolException("Job handle of returned STATUS_RES does not match the requested one");
                 }
 
-                $task = isset($this->tasks[$handle]) ? $this->tasks[$handle] : new UnknownTask($handle);
+                $emitter = $task instanceof Task ? $task : $this->getTaskByHandle($handle);
 
                 $event = new TaskStatusEvent(
-                    $task,
+                    $emitter !== null ? $emitter : new UnknownTask($handle),
                     $res->get('status'),
                     $res->get('running_status'),
                     $res->get('complete_numerator'),
                     $res->get('complete_denominator')
                 );
 
-                if (!$task instanceof UnknownTask) {
-                    $task->emit("status", [$event, $this]);
+                $emitter = $task instanceof Task ? $task : $this->getTaskByHandle($handle);
+                if ($emitter !== null) {
+                    $emitter->emit("status", [$event, $this]);
                 }
 
                 $this->emit("status", [$event, $this]);
@@ -156,14 +236,17 @@ class Client extends Participant implements ClientInterface
 
     protected function handleWorkEvent(CommandInterface $command)
     {
-        if (!isset($this->tasks[$command->get('job_handle')])) {
+        $handle = $command->get('job_handle');
+        $task = $this->getTaskByHandle($handle);
+
+        if ($task === null) {
             throw new ProtocolException("Unexpected $command. Task unknown");
         }
 
-        $task = $this->tasks[$command->get('job_handle')];
-
         switch ($command->getName()) {
             case "WORK_COMPLETE":
+                // There can be multiple tasks for a single handle. This can happen if > 1 tasks are submitted with the same unique id from the same client
+                // WORK_COMPLETE is triggered for every submitted task. So only process a single one
                 $task->emit('complete', [
                     new TaskDataEvent(
                         $task,
@@ -171,6 +254,7 @@ class Client extends Participant implements ClientInterface
                     ),
                     $this
                 ]);
+                $this->setTaskDone($task);
                 break;
             case "WORK_STATUS":
                 $task->emit('status', [
@@ -186,9 +270,11 @@ class Client extends Participant implements ClientInterface
                 break;
             case "WORK_FAIL":
                 $task->emit('failure', [new TaskEvent($task), $this]);
+                $this->setTaskDone($task);
                 break;
             case "WORK_EXCEPTION":
                 $task->emit('exception', [new TaskDataEvent($task, $command->get(CommandInterface::DATA)), $this]);
+                $this->setTaskDone($task);
                 break;
             case "WORK_DATA":
                 $task->emit('data', [new TaskDataEvent($task, $command->get(CommandInterface::DATA)), $this]);

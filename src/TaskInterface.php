@@ -51,4 +51,11 @@ interface TaskInterface extends EventEmitterInterface
      * @return string
      */
     public function getPriority();
+
+    /**
+     * Returns the task's unique id
+     *
+     * @return string
+     */
+    public function getUniqueId();
 }
