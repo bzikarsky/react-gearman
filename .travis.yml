@@ -9,7 +9,7 @@ before_script:
   - composer install --dev
 
 script:
-  - bin/phpunit --coverage-text 
+  - bin/phpunit --coverage-text --exclude-group system
   - bin/php-cs-fixer fix --dry-run --diff -vv
 
 notifications:
