@@ -6,9 +6,12 @@ use Zikarsky\React\Gearman\Event\TaskDataEvent;
 use Zikarsky\React\Gearman\Event\TaskEvent;
 use Zikarsky\React\Gearman\JobInterface;
 use Zikarsky\React\Gearman\TaskInterface;
-use Zikarsky\React\Gearman\UnknownTask;
 use Zikarsky\React\Gearman\WorkerInterface;
 
+/**
+ * Class SystemTest
+ * @group system
+ */
 class SystemTest extends PHPUnit_Framework_TestCase
 {
 
