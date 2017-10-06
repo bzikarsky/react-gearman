@@ -8,6 +8,7 @@ use Zikarsky\React\Gearman\Event\TaskDataEvent;
 use Zikarsky\React\Gearman\Event\TaskEvent;
 use Zikarsky\React\Gearman\ClientInterface;
 use React\Promise\FulfilledPromise;
+use Zikarsky\React\Gearman\UnknownTask;
 
 class ClientTest extends PHPUnit_Framework_TestCase
 {
@@ -50,9 +51,9 @@ class ClientTest extends PHPUnit_Framework_TestCase
     public function submissionDataProvider()
     {
         return [
-            ["test", "data", TaskInterface::PRIORITY_HIGH],
-            ["test", ["test" => "serialize"], TaskInterface::PRIORITY_LOW],
-            ["123", "", TaskInterface::PRIORITY_NORMAL],
+            ["test", "data", TaskInterface::PRIORITY_HIGH, ''],
+            ["test", ["test" => "serialize"], TaskInterface::PRIORITY_LOW, ''],
+            ["123", "", TaskInterface::PRIORITY_NORMAL, '123'],
         ];
     }
 
@@ -71,9 +72,17 @@ class ClientTest extends PHPUnit_Framework_TestCase
     /**
      * @dataProvider submissionDataProvider
      */
-    public function testSubmit($f, $data, $prio)
+    public function testSubmit($f, $data, $prio, $uniqueId)
     {
-        $this->submit($f, $data, $prio);
+        $this->submit($f, $data, $prio, $uniqueId);
+    }
+
+    /**
+     * @dataProvider submissionDataProvider
+     */
+    public function testSubmitBackground($f, $data, $prio, $uniqueId)
+    {
+        $this->submitBackground($f, $data, $prio, $uniqueId);
     }
 
     /**
@@ -224,7 +233,7 @@ class ClientTest extends PHPUnit_Framework_TestCase
         $this->connection->emit($name, [$this->factory->create($name, $data, CommandInterface::MAGIC_RESPONSE)]);
     }
 
-    private function submit($f, $data, $prio = TaskInterface::PRIORITY_NORMAL)
+    private function submit($f, $data, $prio = TaskInterface::PRIORITY_NORMAL, $uniqueId = "")
     {
         $eventTask = null;
         $promiseTask = null;
@@ -233,7 +242,7 @@ class ClientTest extends PHPUnit_Framework_TestCase
             $eventTask = $createdTask;
         });
 
-        $this->client->submit($f, $data, $prio)->then(function ($createdTask) use (&$promiseTask) {
+        $this->client->submit($f, $data, $prio, $uniqueId)->then(function ($createdTask) use (&$promiseTask) {
             $promiseTask = $createdTask;
         });
         $this->respond("JOB_CREATED", ["job_handle" => "test.job"]);
@@ -241,6 +250,31 @@ class ClientTest extends PHPUnit_Framework_TestCase
         foreach ([$eventTask, $promiseTask] as $task) {
             $this->assertNotNull($task);
             $this->assertEquals("test.job", $task->getHandle());
+            $this->assertEquals($f, $task->getFunction());
+            $this->assertEquals($data, $task->getWorkload());
+            $this->assertEquals($prio, $task->getPriority());
+        }
+
+        return $eventTask;
+    }
+
+    private function submitBackground($f, $data, $prio = TaskInterface::PRIORITY_NORMAL, $uniqueId = "")
+    {
+        $eventTask = null;
+        $promiseTask = null;
+
+        $this->client->on("task-submitted", function ($createdTask) use (&$eventTask) {
+            $eventTask = $createdTask;
+        });
+
+        $this->client->submitBackground($f, $data, $prio, $uniqueId)->then(function ($createdTask) use (&$promiseTask) {
+            $promiseTask = $createdTask;
+        });
+        $this->respond("JOB_CREATED", ["job_handle" => "test.job"]);
+
+        foreach ([$eventTask, $promiseTask] as $task) {
+            $this->assertInstanceOf(TaskInterface::class, $task);
+            $this->assertEquals('test.job', $task->getHandle());
             $this->assertEquals($f, $task->getFunction());
             $this->assertEquals($data, $task->getWorkload());
             $this->assertEquals($prio, $task->getPriority());

@@ -6,7 +6,7 @@ class TaskTest extends PHPUnit_Framework_TestCase
 {
     public function testTaskGetters()
     {
-        $task = new \Zikarsky\React\Gearman\Task("function", "workload", "handle", TaskInterface::PRIORITY_NORMAL);
+        $task = new \Zikarsky\React\Gearman\Task("function", "workload", "handle", TaskInterface::PRIORITY_NORMAL, "");
 
         $this->assertEquals("function", $task->getFunction());
         $this->assertEquals("workload", $task->getWorkload());
