@@ -95,7 +95,7 @@ class Job extends EventEmitter implements JobInterface
     {
         $this->assertStatus(self::STATUS_RUNNING);
         $this->setStatus(self::STATUS_FAILED);
- 
+
         $payload = [
             'job_handle'            => $this->getHandle(),
             CommandInterface::DATA  => $exception
@@ -108,10 +108,10 @@ class Job extends EventEmitter implements JobInterface
     {
         $this->assertStatus(self::STATUS_RUNNING);
         $this->setStatus(self::STATUS_FAILED);
-        
+
         $payload = ['job_handle' => $this->getHandle()];
 
-        return call_user_func($this->send, 'WORK_ERROR', $payload);
+        return call_user_func($this->send, 'WORK_FAIL', $payload);
     }
 
     public function complete($data = null)

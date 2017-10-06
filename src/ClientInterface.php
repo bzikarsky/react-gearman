@@ -31,9 +31,22 @@ interface ClientInterface
      * @param  string  $function
      * @param  string  $workload
      * @param  string  $priority defaults to TaskInterface::PRIORITY_NORMAL
+     * @param  string  $uniqueId
      * @return Promise
      */
-    public function submit($function, $workload, $priority = TaskInterface::PRIORITY_NORMAL);
+    public function submit($function, $workload, $priority = TaskInterface::PRIORITY_NORMAL, $uniqueId = '');
+
+    /**
+     * Submits a task to the server, promise is resolved on task creation with a TaskInterface
+     * Also the task-created event is fired
+     *
+     * @param  string  $function
+     * @param  string  $workload
+     * @param  string  $priority defaults to TaskInterface::PRIORITY_NORMAL
+     * @param  string  $uniqueId
+     * @return Promise
+     */
+    public function submitBackground($function, $workload, $priority = TaskInterface::PRIORITY_NORMAL, $uniqueId = '');
 
     /**
      * Sets an option for the client, promise is resolved when option is set with the option_name

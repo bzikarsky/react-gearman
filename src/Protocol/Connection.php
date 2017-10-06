@@ -141,7 +141,7 @@ class Connection extends EventEmitter
         if ($this->isClosed()) {
             throw new BadMethodCallException("Connection is closed. Cannot send commands anymore");
         }
-        
+
         $deferred = new Deferred();
         $this->logger->info("> $command");
         $this->writeBuffer->push($command);

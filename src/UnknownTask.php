@@ -54,4 +54,15 @@ class UnknownTask extends EventEmitter implements TaskInterface
     {
         return null;
     }
+
+    /**
+     * Returns null since the id of an unknown task is unknown
+     *
+     * @return null
+     */
+    public function getUniqueId()
+    {
+        return null;
+    }
+
 }

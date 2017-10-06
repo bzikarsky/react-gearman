@@ -26,12 +26,18 @@ class Task extends EventEmitter implements TaskInterface
      */
     protected $priority;
 
-    public function __construct($function, $workload, $handle, $priority)
+    /**
+     * @var string
+     */
+    protected $uniqueId;
+
+    public function __construct($function, $workload, $handle, $priority, $uniqueId)
     {
         $this->function = $function;
         $this->workload = $workload;
         $this->handle   = $handle;
         $this->priority = $priority;
+        $this->uniqueId = $uniqueId;
     }
 
     /**
@@ -65,4 +71,13 @@ class Task extends EventEmitter implements TaskInterface
     {
         return $this->priority;
     }
+
+    /**
+     * @return string
+     */
+    public function getUniqueId()
+    {
+        return $this->uniqueId;
+    }
+
 }
