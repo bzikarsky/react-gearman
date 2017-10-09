@@ -2,6 +2,7 @@
 
 namespace Zikarsky\React\Gearman;
 
+use Ramsey\Uuid\Uuid;
 use React\Promise\FulfilledPromise;
 use React\Promise\PromiseInterface;
 use Zikarsky\React\Gearman\Event\TaskDataEvent;
@@ -82,9 +83,18 @@ class Client extends Participant implements ClientInterface
         return null;
     }
 
+    protected function assertUniqueId($uniqueId = null)
+    {
+        if (empty($uniqueId)) {
+            $uniqueId = Uuid::uuid4()->toString();
+        }
+
+        return $uniqueId;
+    }
+
     protected function checkUniqueTasks($function, $uniqueId)
     {
-        if ($uniqueId !== "" && isset($this->uniqueTasks[$function . ';' . $uniqueId])) {
+        if (isset($this->uniqueTasks[$function . ';' . $uniqueId])) {
             throw new DuplicateJobException("Job with unique id already submitted");
         }
 
@@ -115,6 +125,7 @@ class Client extends Participant implements ClientInterface
      */
     public function submit($function, $workload = "", $priority = TaskInterface::PRIORITY_NORMAL, $uniqueId = "")
     {
+        $uniqueId = $this->assertUniqueId($uniqueId);
         $this->checkUniqueTasks($function, $uniqueId);
 
         $type = "SUBMIT_JOB" . ($priority == "" ? "" : "_" . strtoupper($priority));
@@ -163,6 +174,7 @@ class Client extends Participant implements ClientInterface
      */
     public function submitBackground($function, $workload = "", $priority = TaskInterface::PRIORITY_NORMAL, $uniqueId = "")
     {
+        $uniqueId = $this->assertUniqueId($uniqueId);
         $type = "SUBMIT_JOB" . ($priority == "" ? "" : "_" . strtoupper($priority)) . "_BG";
         $command = $this->getCommandFactory()->create($type, [
             'function_name' => $function,
@@ -250,6 +262,11 @@ class Client extends Participant implements ClientInterface
                 return $event;
             }
         );
+    }
+
+    public function cancel(TaskInterface $task)
+    {
+        $task->removeAllListeners();
     }
 
     /**
