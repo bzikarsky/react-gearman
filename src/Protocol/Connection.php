@@ -40,7 +40,7 @@ class Connection extends EventEmitter
     /**
      * @var Stream
      */
-    protected $stream;
+    public $stream;
 
     /**
      * @var CommandFactoryInterface
