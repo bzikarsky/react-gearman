@@ -64,5 +64,4 @@ class UnknownTask extends EventEmitter implements TaskInterface
     {
         return null;
     }
-
 }

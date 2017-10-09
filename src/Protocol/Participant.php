@@ -74,11 +74,12 @@ abstract class Participant extends EventEmitter
         });
     }
 
-    protected function blockingActionStart() {
-
+    protected function blockingActionStart()
+    {
     }
 
-    protected function blockingActionEnd() {
+    protected function blockingActionEnd()
+    {
     }
 
     /**
