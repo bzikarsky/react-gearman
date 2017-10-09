@@ -14,7 +14,6 @@ use Zikarsky\React\Gearman\WorkerInterface;
  */
 class SystemTest extends PHPUnit_Framework_TestCase
 {
-
     protected function asyncTest(callable $coroutine)
     {
         \Amp\Loop::set((new \Amp\Loop\DriverFactory)->create());
@@ -252,7 +251,6 @@ class SystemTest extends PHPUnit_Framework_TestCase
             try {
                 yield $client->submit($queueName, 'TestData3a', TaskInterface::PRIORITY_LOW, '3');
             } catch (Exception $e) {
-
             }
             $task3 = yield $client->submit($queueName, 'TestData4', TaskInterface::PRIORITY_HIGH, '4');
 
@@ -480,5 +478,4 @@ class SystemTest extends PHPUnit_Framework_TestCase
             $worker->disconnect();
         });
     }
-
 }
