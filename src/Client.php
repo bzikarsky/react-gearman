@@ -42,6 +42,11 @@ class Client extends Participant implements ClientInterface
     protected $uniqueTasks = [];
 
     /**
+     * @var int
+     */
+    protected $pendingActions = 0;
+
+    /**
      * Creates the client on top of the given connection
      *
      * @param Connection $connection
@@ -53,6 +58,8 @@ class Client extends Participant implements ClientInterface
         foreach (self::$workEvents as $event) {
             $this->getConnection()->on($event, [$this, 'handleWorkEvent']);
         }
+
+        $this->getConnection()->stream->pause();
     }
 
     /**
@@ -84,6 +91,8 @@ class Client extends Participant implements ClientInterface
         if ($task->getUniqueId() !== '') {
             unset($this->uniqueTasks[$task->getFunction() . ';' . $task->getUniqueId()]);
         }
+
+        $this->taskEnd();
     }
 
     /**
@@ -120,6 +129,8 @@ class Client extends Participant implements ClientInterface
                     $priority,
                     $uniqueId
                 );
+
+                $this->taskStart();
 
                 $this->tasks[$handle] = $task;
 
@@ -289,4 +300,41 @@ class Client extends Participant implements ClientInterface
             // @codeCoverageIgnoreEnd
         }
     }
+
+    protected function getSocket()
+    {
+        return $this->getConnection()->stream->stream;
+    }
+
+    protected function blockingActionStart()
+    {
+        parent::blockingActionStart();
+        $this->getConnection()->stream->resume();
+    }
+
+    protected function blockingActionEnd()
+    {
+        parent::blockingActionEnd();
+        $this->disableReadableIfNoTasks();
+    }
+
+
+    protected function taskStart()
+    {
+        if (count($this->tasks) == 0) {
+            $this->getConnection()->stream->resume();
+        }
+    }
+
+    protected function taskEnd()
+    {
+        $this->disableReadableIfNoTasks();
+    }
+
+    protected function disableReadableIfNoTasks() {
+        if (count($this->tasks) + $this->pendingActions == 0) {
+            $this->getConnection()->stream->pause();
+        }
+    }
+
 }

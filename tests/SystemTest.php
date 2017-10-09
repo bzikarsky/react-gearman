@@ -19,7 +19,12 @@ class SystemTest extends PHPUnit_Framework_TestCase
     {
         \Amp\Loop::set((new \Amp\Loop\DriverFactory)->create());
         gc_collect_cycles(); // extensions using an event loop may otherwise leak the file descriptors to the loop
-        return \Amp\Promise\wait(\Amp\call($coroutine));
+        $result = \Amp\Promise\wait(\Amp\call($coroutine));
+        $info = \Amp\Loop::get()->getInfo();
+        if ($info['enabled_watchers']['referenced'] > 0) {
+            $this->fail("Loop has referenced watchers: " . json_encode($info));
+        }
+        return $result;
     }
 
     protected function getFactory()
@@ -74,7 +79,8 @@ class SystemTest extends PHPUnit_Framework_TestCase
 
     public function testSubmitAndWork()
     {
-        $this->asyncTest(function () {
+        $queueName = __METHOD__;
+        $this->asyncTest(function () use ($queueName) {
             /**
              * @var ClientInterface $client
              * @var WorkerInterface $worker
@@ -83,7 +89,7 @@ class SystemTest extends PHPUnit_Framework_TestCase
 
             $workerCalled = false;
             $responseReceived = false;
-            yield $worker->register('test', function (JobInterface $job) use (&$workerCalled) {
+            yield $worker->register($queueName, function (JobInterface $job) use (&$workerCalled) {
                 $job->complete($job->getWorkload());
                 $workerCalled = true;
             });
@@ -91,22 +97,23 @@ class SystemTest extends PHPUnit_Framework_TestCase
             /**
              * @var TaskInterface $task
              */
-            $task = yield $client->submit('test', 'TestData');
+            $task = yield $client->submit($queueName, 'TestData');
 
             yield $this->getTaskPromise($task, function (TaskDataEvent $event, ClientInterface $client) use (&$responseReceived) {
                 $responseReceived = true;
                 $this->assertEquals('TestData', $event->getData());
-                $client->disconnect();
             });
 
             $this->assertTrue($workerCalled);
             $this->assertTrue($responseReceived);
+            $worker->disconnect();
         });
     }
 
     public function testSubmitBackgroundAndWork()
     {
-        $this->asyncTest(function () {
+        $queueName = __METHOD__;
+        $this->asyncTest(function () use ($queueName) {
             /**
              * @var ClientInterface $client
              * @var WorkerInterface $worker
@@ -115,30 +122,33 @@ class SystemTest extends PHPUnit_Framework_TestCase
 
             $workerCalled = false;
 
-            $task = yield $client->submitBackground('test', 'TestData');
+            $task = yield $client->submitBackground($queueName, 'TestData');
             $this->assertInstanceOf(TaskInterface::class, $task);
 
             $deferred = new \Amp\Deferred();
 
-            yield $worker->register('test', function (JobInterface $job) use (&$workerCalled, $deferred) {
+            $watcher = \Amp\Loop::delay(100, function () use ($deferred) {
+                $deferred->fail(new Exception("Job timed out"));
+            });
+
+            yield $worker->register($queueName, function (JobInterface $job) use (&$workerCalled, $deferred, $watcher) {
                 $job->complete($job->getWorkload());
                 $workerCalled = true;
                 $this->assertEquals('TestData', $job->getWorkload());
                 $deferred->resolve();
-            });
-
-            \Amp\Loop::delay(100, function () use ($deferred) {
-                $deferred->fail(new Exception("Job timed out"));
+                \Amp\Loop::cancel($watcher);
             });
 
             yield $deferred->promise();
             $this->assertTrue($workerCalled);
+            $worker->disconnect();
         });
     }
 
     public function testSubmitWithUniqueIds()
     {
-        $this->asyncTest(function () {
+        $queueName = __METHOD__;
+        $this->asyncTest(function () use ($queueName) {
             /**
              * @var ClientInterface $client
              * @var WorkerInterface $worker
@@ -150,15 +160,14 @@ class SystemTest extends PHPUnit_Framework_TestCase
              * @var TaskInterface $task2
              * @var TaskInterface $task3
              */
-            $task1 = yield $client->submit('test', 'TestData1', TaskInterface::PRIORITY_NORMAL, '1');
+            $task1 = yield $client->submit($queueName, 'TestData1', TaskInterface::PRIORITY_NORMAL, '1');
             try {
-                yield $client->submit('test', 'TestData1a', TaskInterface::PRIORITY_NORMAL, '1');
+                yield $client->submit($queueName, 'TestData1a', TaskInterface::PRIORITY_NORMAL, '1');
                 $this->fail("DuplicateJobException not thrown");
-            }
-            catch (DuplicateJobException $e) {
+            } catch (DuplicateJobException $e) {
                 // Expected
             }
-            $task3 = yield $client->submit('test', 'TestData2', TaskInterface::PRIORITY_NORMAL, '2');
+            $task3 = yield $client->submit($queueName, 'TestData2', TaskInterface::PRIORITY_NORMAL, '2');
 
             $taskPromise1 = $this->getTaskPromise($task1, function (TaskDataEvent $event, ClientInterface $client) use (&$responseReceived) {
                 $this->assertEquals('TestData1', $event->getData());
@@ -170,7 +179,7 @@ class SystemTest extends PHPUnit_Framework_TestCase
             $deferred = new \Amp\Deferred();
 
             $jobCalls = [];
-            yield $worker->register('test', function (JobInterface $job) use (&$jobCalls, $deferred) {
+            yield $worker->register($queueName, function (JobInterface $job) use (&$jobCalls, $deferred) {
                 $job->complete($job->getWorkload());
                 $jobCalls[] = $job->getWorkload();
                 if (count($jobCalls) == 2) {
@@ -185,112 +194,134 @@ class SystemTest extends PHPUnit_Framework_TestCase
                 'TestData1',
                 'TestData2',
             ], $jobCalls);
+            $worker->disconnect();
         });
     }
 
     public function testSubmitBackgroundWithUniqueIds()
     {
-        $this->asyncTest(function () {
+        $queueName = __METHOD__;
+        $this->asyncTest(function () use ($queueName) {
             /**
              * @var ClientInterface $client
              * @var WorkerInterface $worker
              */
             list($client, $worker) = yield from $this->getWorkerAndClient();
 
-            yield $client->submitBackground('test', 'TestData1', TaskInterface::PRIORITY_NORMAL, '1b');
-            yield $client->submitBackground('test', 'TestData1a', TaskInterface::PRIORITY_NORMAL, '1b');
-            yield $client->submitBackground('test', 'TestData2', TaskInterface::PRIORITY_NORMAL, '2b');
+            yield $client->submitBackground($queueName, 'TestData1', TaskInterface::PRIORITY_NORMAL, '1b');
+            yield $client->submitBackground($queueName, 'TestData1a', TaskInterface::PRIORITY_NORMAL, '1b');
+            yield $client->submitBackground($queueName, 'TestData2', TaskInterface::PRIORITY_NORMAL, '2b');
 
             $deferred = new \Amp\Deferred();
+            $watcher = \Amp\Loop::delay(100, function () use ($deferred) {
+                $deferred->fail(new Exception("Job timed out"));
+            });
 
             $jobCalls = [];
-            yield $worker->register('test', function (JobInterface $job) use (&$jobCalls, $deferred) {
+            yield $worker->register($queueName, function (JobInterface $job) use (&$jobCalls, $deferred, $watcher) {
                 $job->complete($job->getWorkload());
                 $jobCalls[] = $job->getWorkload();
                 if (count($jobCalls) == 2) {
                     $deferred->resolve();
+                    \Amp\Loop::cancel($watcher);
                 }
             });
 
-            \Amp\Loop::delay(100, function () use ($deferred) {
-                $deferred->fail(new Exception("Job timed out"));
-            });
-
             yield $deferred->promise();
+
+            sort($jobCalls);
             $this->assertEquals([
                 'TestData1',
                 'TestData2',
             ], $jobCalls);
+            $worker->disconnect();
         });
     }
 
     public function testSubmitWithPriorities()
     {
-        $this->asyncTest(function () {
+        $queueName = __METHOD__;
+        $this->asyncTest(function () use ($queueName) {
             /**
              * @var ClientInterface $client
              * @var WorkerInterface $worker
              */
             list($client, $worker) = yield from $this->getWorkerAndClient();
 
-            yield $client->submit('test', 'TestData3', TaskInterface::PRIORITY_LOW, '3');
+            $task1 = yield $client->submit($queueName, 'TestData3', TaskInterface::PRIORITY_LOW, '3');
             try {
-                yield $client->submit('test', 'TestData3a', TaskInterface::PRIORITY_LOW, '3');
-            }
-            catch (Exception $e) {
+                yield $client->submit($queueName, 'TestData3a', TaskInterface::PRIORITY_LOW, '3');
+            } catch (Exception $e) {
 
             }
-            yield $client->submit('test', 'TestData4', TaskInterface::PRIORITY_HIGH, '4');
+            $task3 = yield $client->submit($queueName, 'TestData4', TaskInterface::PRIORITY_HIGH, '4');
+
+            $taskPromise1 = $this->getTaskPromise($task1, function (TaskDataEvent $event, ClientInterface $client) use (&$responseReceived) {
+                $this->assertEquals('TestData3', $event->getData());
+            });
+            $taskPromise3 = $this->getTaskPromise($task3, function (TaskDataEvent $event, ClientInterface $client) use (&$responseReceived) {
+                $this->assertEquals('TestData4', $event->getData());
+            });
 
             $deferred = new \Amp\Deferred();
 
             $jobCalls = [];
-            yield $worker->register('test', function (JobInterface $job) use (&$jobCalls, $deferred) {
+
+            $watcher = \Amp\Loop::delay(100, function () use ($deferred) {
+                $deferred->fail(new Exception("Job timed out"));
+            });
+
+            yield $worker->register($queueName, function (JobInterface $job) use (&$jobCalls, $deferred, $watcher) {
                 $job->complete($job->getWorkload());
                 $jobCalls[] = $job->getWorkload();
                 if (count($jobCalls) == 2) {
+                    \Amp\Loop::cancel($watcher);
                     $deferred->resolve();
                 }
             });
 
-            \Amp\Loop::delay(100, function () use ($deferred) {
-                $deferred->fail(new Exception("Job timed out"));
-            });
-
             yield $deferred->promise();
+
+            yield $taskPromise1;
+            yield $taskPromise3;
+
             $this->assertEquals([
                 'TestData4',
                 'TestData3',
             ], $jobCalls);
+            $worker->disconnect();
         });
     }
 
     public function testSubmitBackgroundWithPriorities()
     {
-        $this->asyncTest(function () {
+        $queueName = __METHOD__;
+        $this->asyncTest(function () use ($queueName) {
             /**
              * @var ClientInterface $client
              * @var WorkerInterface $worker
              */
             list($client, $worker) = yield from $this->getWorkerAndClient();
 
-            yield $client->submitBackground('test', 'TestData3', TaskInterface::PRIORITY_LOW, '3b');
-            yield $client->submitBackground('test', 'TestData3a', TaskInterface::PRIORITY_LOW, '3b');
-            yield $client->submitBackground('test', 'TestData4', TaskInterface::PRIORITY_HIGH, '4b');
+            yield $client->submitBackground($queueName, 'TestData3', TaskInterface::PRIORITY_LOW, '3b');
+            yield $client->submitBackground($queueName, 'TestData3a', TaskInterface::PRIORITY_LOW, '3b');
+            yield $client->submitBackground($queueName, 'TestData4', TaskInterface::PRIORITY_HIGH, '4b');
 
             $deferred = new \Amp\Deferred();
 
             $jobCalls = [];
-            yield $worker->register('test', function (JobInterface $job) use (&$jobCalls, $deferred) {
+
+            $watcher = \Amp\Loop::delay(100, function () use ($deferred) {
+                $deferred->fail(new Exception("Job timed out"));
+            });
+
+            yield $worker->register($queueName, function (JobInterface $job) use (&$jobCalls, $deferred, $watcher) {
                 $job->complete($job->getWorkload());
                 $jobCalls[] = $job->getWorkload();
                 if (count($jobCalls) == 2) {
+                    \Amp\Loop::cancel($watcher);
                     $deferred->resolve();
                 }
-            });
-
-            \Amp\Loop::delay(100, function () use ($deferred) {
-                $deferred->fail(new Exception("Job timed out"));
             });
 
             yield $deferred->promise();
@@ -298,12 +329,14 @@ class SystemTest extends PHPUnit_Framework_TestCase
                 'TestData4',
                 'TestData3',
             ], $jobCalls);
+            $worker->disconnect();
         });
     }
 
     public function testProgress()
     {
-        $this->asyncTest(function () {
+        $queueName = __METHOD__;
+        $this->asyncTest(function () use ($queueName) {
             /**
              * @var ClientInterface $client
              * @var WorkerInterface $worker
@@ -313,10 +346,10 @@ class SystemTest extends PHPUnit_Framework_TestCase
             /**
              * @var TaskInterface $task1
              */
-            $task = yield $client->submit('test', 'TestData1', TaskInterface::PRIORITY_NORMAL, '1p');
+            $task = yield $client->submit($queueName, 'TestData1', TaskInterface::PRIORITY_NORMAL, '1p');
 
             $dataReceived = [];
-            $task->on('data', function(TaskDataEvent $event, ClientInterface $client) use (&$dataReceived) {
+            $task->on('data', function (TaskDataEvent $event, ClientInterface $client) use (&$dataReceived) {
                 $dataReceived[] = $event->getData();
             });
 
@@ -327,7 +360,7 @@ class SystemTest extends PHPUnit_Framework_TestCase
             $deferred = new \Amp\Deferred();
 
             $jobCalls = [];
-            yield $worker->register('test', function (JobInterface $job) use (&$jobCalls, $deferred) {
+            yield $worker->register($queueName, function (JobInterface $job) use (&$jobCalls, $deferred) {
                 $job->sendData("Some data");
                 $job->complete($job->getWorkload());
                 $jobCalls[] = $job->getWorkload();
@@ -342,12 +375,14 @@ class SystemTest extends PHPUnit_Framework_TestCase
             $this->assertEquals([
                 'Some data'
             ], $dataReceived);
+            $worker->disconnect();
         });
     }
 
     public function testException()
     {
-        $this->asyncTest(function () {
+        $queueName = __METHOD__;
+        $this->asyncTest(function () use ($queueName) {
             /**
              * @var ClientInterface $client
              * @var WorkerInterface $worker
@@ -358,29 +393,30 @@ class SystemTest extends PHPUnit_Framework_TestCase
             /**
              * @var TaskInterface $task1
              */
-            $task = yield $client->submit('test', 'TestData1', TaskInterface::PRIORITY_NORMAL);
+            $task = yield $client->submit($queueName, 'TestData1', TaskInterface::PRIORITY_NORMAL);
 
             $taskPromise1 = $this->getTaskPromise($task, function (TaskDataEvent $event, ClientInterface $client) use (&$responseReceived) {
                 $this->assertEquals('TestData1', $event->getData());
             });
 
-            yield $worker->register('test', function (JobInterface $job) use (&$jobCalls) {
+            yield $worker->register($queueName, function (JobInterface $job) use (&$jobCalls) {
                 $job->fail("Reason");
             });
 
             try {
                 yield $taskPromise1;
                 $this->fail("Job did not return with error");
-            }
-            catch (Exception $e) {
+            } catch (Exception $e) {
                 $this->assertEquals("Reason", $e->getMessage());
             }
+            $worker->disconnect();
         });
     }
 
     public function testError()
     {
-        $this->asyncTest(function () {
+        $queueName = __METHOD__;
+        $this->asyncTest(function () use ($queueName) {
             /**
              * @var ClientInterface $client
              * @var WorkerInterface $worker
@@ -390,29 +426,30 @@ class SystemTest extends PHPUnit_Framework_TestCase
             /**
              * @var TaskInterface $task1
              */
-            $task = yield $client->submit('test', 'TestData1', TaskInterface::PRIORITY_NORMAL);
+            $task = yield $client->submit($queueName, 'TestData1', TaskInterface::PRIORITY_NORMAL);
 
             $taskPromise1 = $this->getTaskPromise($task, function (TaskDataEvent $event, ClientInterface $client) use (&$responseReceived) {
                 $this->assertEquals('TestData1', $event->getData());
             });
 
-            yield $worker->register('test', function (JobInterface $job) use (&$jobCalls) {
+            yield $worker->register($queueName, function (JobInterface $job) use (&$jobCalls) {
                 $job->fail();
             });
 
             try {
                 yield $taskPromise1;
                 $this->fail("Job did not return with error");
-            }
-            catch (Exception $e) {
+            } catch (Exception $e) {
                 $this->assertEquals("N/A", $e->getMessage());
             }
+            $worker->disconnect();
         });
     }
 
     public function testWarning()
     {
-        $this->asyncTest(function () {
+        $queueName = __METHOD__;
+        $this->asyncTest(function () use ($queueName) {
             /**
              * @var ClientInterface $client
              * @var WorkerInterface $worker
@@ -422,24 +459,25 @@ class SystemTest extends PHPUnit_Framework_TestCase
             /**
              * @var TaskInterface $task1
              */
-            $task = yield $client->submit('test', 'TestData1', TaskInterface::PRIORITY_NORMAL);
+            $task = yield $client->submit($queueName, 'TestData1', TaskInterface::PRIORITY_NORMAL);
 
             $taskPromise1 = $this->getTaskPromise($task, function (TaskDataEvent $event, ClientInterface $client) use (&$responseReceived) {
                 $this->assertEquals('TestData1', $event->getData());
             });
 
             $warningReceived = null;
-            $task->on('warning', function(TaskDataEvent $event, ClientInterface $client) use (&$warningReceived) {
+            $task->on('warning', function (TaskDataEvent $event, ClientInterface $client) use (&$warningReceived) {
                 $warningReceived = $event->getData();
             });
 
-            yield $worker->register('test', function (JobInterface $job) use (&$jobCalls) {
+            yield $worker->register($queueName, function (JobInterface $job) use (&$jobCalls) {
                 $job->sendWarning('A warning');
                 $job->complete('TestData1');
             });
 
             yield $taskPromise1;
             $this->assertEquals("A warning", $warningReceived);
+            $worker->disconnect();
         });
     }
 

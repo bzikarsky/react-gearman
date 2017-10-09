@@ -74,6 +74,13 @@ abstract class Participant extends EventEmitter
         });
     }
 
+    protected function blockingActionStart() {
+
+    }
+
+    protected function blockingActionEnd() {
+    }
+
     /**
      * Performs a blocking action (request<->response pattern)
      *
@@ -90,6 +97,7 @@ abstract class Participant extends EventEmitter
         // create the deferred action to execute $handler on $eventName after sending $command
         $deferred = new Deferred();
         $actionPromise = $deferred->promise();
+        $this->blockingActionStart();
 
         // send command
         $this->send($command, $actionPromise)->then(
@@ -103,6 +111,7 @@ abstract class Participant extends EventEmitter
                     // itself
                     $result = $handler($sentCommand, $recvCommand, $deferred);
                     if ($result !== null) {
+                        $this->blockingActionEnd();
                         $deferred->resolve($result);
                     }
                 });
