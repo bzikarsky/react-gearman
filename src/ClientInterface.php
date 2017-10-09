@@ -71,4 +71,11 @@ interface ClientInterface
      * Disconnects the client from the server
      */
     public function disconnect();
+
+    /**
+     * Waits until all pending tasks + submits have finished
+     *
+     * @return Promise
+     */
+    public function wait();
 }

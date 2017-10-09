@@ -79,5 +79,4 @@ class Task extends EventEmitter implements TaskInterface
     {
         return $this->uniqueId;
     }
-
 }

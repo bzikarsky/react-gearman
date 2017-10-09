@@ -2,6 +2,8 @@
 
 namespace Zikarsky\React\Gearman;
 
+use React\Promise\FulfilledPromise;
+use React\Promise\PromiseInterface;
 use Zikarsky\React\Gearman\Event\TaskDataEvent;
 use Zikarsky\React\Gearman\Event\TaskEvent;
 use Zikarsky\React\Gearman\Event\TaskStatusEvent;
@@ -45,6 +47,11 @@ class Client extends Participant implements ClientInterface
      * @var int
      */
     protected $pendingActions = 0;
+
+    /**
+     * @var \React\Promise\Deferred[]
+     */
+    protected $waitingPromises = [];
 
     /**
      * Creates the client on top of the given connection
@@ -245,6 +252,21 @@ class Client extends Participant implements ClientInterface
         );
     }
 
+    /**
+     * Waits until all pending tasks + submits have finished
+     *
+     * @return PromiseInterface
+     */
+    public function wait()
+    {
+        if (!$this->hasPendingTasks()) {
+            return new FulfilledPromise();
+        }
+        $deferred = new \React\Promise\Deferred();
+        $this->waitingPromises[] = $deferred;
+        return $deferred->promise();
+    }
+
     protected function handleWorkEvent(CommandInterface $command)
     {
         $handle = $command->get('job_handle');
@@ -309,12 +331,14 @@ class Client extends Participant implements ClientInterface
     protected function blockingActionStart()
     {
         parent::blockingActionStart();
+        $this->pendingActions++;
         $this->getConnection()->stream->resume();
     }
 
     protected function blockingActionEnd()
     {
         parent::blockingActionEnd();
+        $this->pendingActions--;
         $this->disableReadableIfNoTasks();
     }
 
@@ -331,10 +355,18 @@ class Client extends Participant implements ClientInterface
         $this->disableReadableIfNoTasks();
     }
 
-    protected function disableReadableIfNoTasks() {
-        if (count($this->tasks) + $this->pendingActions == 0) {
-            $this->getConnection()->stream->pause();
-        }
+    protected function hasPendingTasks()
+    {
+        return (count($this->tasks) + $this->pendingActions) > 0;
     }
 
+    protected function disableReadableIfNoTasks()
+    {
+        if (!$this->hasPendingTasks()) {
+            $this->getConnection()->stream->pause();
+            foreach ($this->waitingPromises as $promise) {
+                $promise->resolve();
+            }
+        }
+    }
 }
