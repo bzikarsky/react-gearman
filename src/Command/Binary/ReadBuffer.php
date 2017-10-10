@@ -159,22 +159,25 @@ class ReadBuffer implements Countable
      */
     protected function handleBody($buffer)
     {
+        $i = 0;
         // split buffer into arguments
         $args = array_keys($this->currentCommand->getAll());
-        $argv = strlen($buffer) ? explode(CommandInterface::ARGUMENT_DELIMITER, $buffer) : [];
 
-        // validate argument-count vs expected argument count
-        if (count($args) > count($argv)) {
-            throw new ProtocolException("Invalid package-header: header.size bytes did not contain full package body");
-        }
-        // ignore any data after the last allowed \0. See https://github.com/gearman/gearmand/issues/108
-        if (count($args) < count($argv)) {
-            $argv = array_slice($argv, 0, count($args));
-        }
-
-        // save arguments
         foreach ($args as $arg) {
-            $this->currentCommand->set($arg, array_shift($argv));
+            if (empty($buffer)) {
+                throw new ProtocolException("Invalid package-header: header.size bytes did not contain full package body");
+            }
+            $nextArgs = '';
+            while ($i < strlen($buffer)) {
+                $char = substr($buffer, $i, 1);
+                $i++;
+                if ($char == CommandInterface::ARGUMENT_DELIMITER) {
+                    break;
+                }
+                $nextArgs .= $char;
+            }
+
+            $this->currentCommand->set($arg, $nextArgs);
         }
 
         // set set state: put complete command into buffer, and expect a header next
@@ -182,6 +185,7 @@ class ReadBuffer implements Countable
         $this->currentCommand   = null;
         $this->requiredBytes    = CommandInterface::HEADER_LENGTH;
     }
+
 
     /**
      * Return count of parsed and waiting commands
