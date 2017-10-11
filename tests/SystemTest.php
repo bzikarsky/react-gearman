@@ -49,7 +49,7 @@ class SystemTest extends PHPUnit_Framework_TestCase
     {
         $deferred = new \Amp\Deferred();
 
-        $watcher = \Amp\Loop::delay(200, function () use ($deferred, $task) {
+        $watcher = \Amp\Loop::delay(100, function () use ($deferred, $task) {
             $deferred->fail(new Exception("Job timed out: {$task->getWorkload()}"));
         });
 
@@ -105,6 +105,52 @@ class SystemTest extends PHPUnit_Framework_TestCase
 
             $this->assertTrue($workerCalled);
             $this->assertTrue($responseReceived);
+            $worker->disconnect();
+        });
+    }
+
+    /**
+     * @depends testSubmitAndWork
+     */
+    public function testSubmitAndWorkWithManyJobs()
+    {
+        $queueName = __METHOD__;
+        $this->asyncTest(function () use ($queueName) {
+            /**
+             * @var ClientInterface $client
+             * @var WorkerInterface $worker
+             */
+            list($client, $worker) = yield from $this->getWorkerAndClient();
+            $worker->setMaxParallelRequests(10);
+
+            $workerCalled = false;
+            $responseReceived = false;
+
+            $promises = [];
+            $tasks = 30;
+            for ($x = 0; $x < $tasks; $x++) {
+                $promises[] = $client->submit($queueName, 'TestData'.$x);
+            }
+
+            $tasks = yield \Amp\Promise\all($promises);
+
+            // Register worker after submitting tasks. Otherwise task resolutions could be missed.
+            // @todo Fix race condition, task should always be resolved
+            yield $worker->register($queueName, function (JobInterface $job) use (&$workerCalled) {
+                $job->complete($job->getWorkload());
+                $workerCalled = true;
+            });
+
+            foreach ($tasks as $i => $task) {
+                yield $this->getTaskPromise($task, function (TaskDataEvent $event, ClientInterface $client) use (&$responseReceived, $i) {
+                    $responseReceived = true;
+                    $this->assertEquals('TestData'.$i, $event->getData());
+                });
+
+                $this->assertTrue($workerCalled);
+                $this->assertTrue($responseReceived);
+            }
+
             $worker->disconnect();
         });
     }
@@ -476,6 +522,110 @@ class SystemTest extends PHPUnit_Framework_TestCase
             yield $taskPromise1;
             $this->assertEquals("A warning", $warningReceived);
             $worker->disconnect();
+        });
+    }
+
+    public function testPauseAndResume()
+    {
+        $queueName = __METHOD__;
+        $this->asyncTest(function () use ($queueName) {
+            /**
+             * @var ClientInterface $client
+             * @var WorkerInterface $worker
+             */
+            list($client, $worker) = yield from $this->getWorkerAndClient();
+
+            $jobCalls = 0;
+            // Pause before register as register triggers a grab job
+            $worker->pause();
+            yield $worker->register($queueName, function (JobInterface $job) use (&$jobCalls) {
+                $jobCalls++;
+                $job->complete('TestData1');
+            });
+
+            /**
+             * @var TaskInterface $task1
+             */
+            $task = yield $client->submit($queueName, 'TestData1', TaskInterface::PRIORITY_NORMAL);
+
+            $taskPromise1 = $this->getTaskPromise($task, function (TaskDataEvent $event, ClientInterface $client) use (&$responseReceived) {
+                $this->assertEquals('TestData1', $event->getData());
+            });
+
+            // Wait some time and expect nothing to be done
+            yield new \Amp\Delayed(50);
+            $this->assertEquals(0, $jobCalls);
+
+            $worker->resume();
+            yield $taskPromise1;
+            $this->assertEquals(1, $jobCalls);
+            $worker->disconnect();
+        });
+    }
+
+    public function testGracefulShutdown()
+    {
+        $queueName = __METHOD__;
+        $this->asyncTest(function () use ($queueName) {
+            /**
+             * @var ClientInterface $client
+             * @var WorkerInterface $worker
+             */
+            list($client, $worker) = yield from $this->getWorkerAndClient();
+
+            $shutdownPromise = null;
+            yield $worker->register($queueName, function (JobInterface $job) use ($worker, &$shutdownPromise) {
+                $shutdownPromise = $worker->shutdown();
+                $job->complete($job->getWorkload());
+            });
+
+            /**
+             * @var TaskInterface $task
+             */
+            $task = yield $client->submit($queueName, 'TestData');
+
+            yield $this->getTaskPromise($task, function (TaskDataEvent $event, ClientInterface $client) use (&$responseReceived) {
+                $this->assertEquals('TestData', $event->getData());
+            });
+
+            yield $shutdownPromise;
+        });
+    }
+
+    public function testDisconnectIsNotGraceul()
+    {
+        $queueName = __METHOD__;
+        $this->asyncTest(function () use ($queueName) {
+            /**
+             * @var ClientInterface $client
+             * @var WorkerInterface $worker
+             */
+            list($client, $worker) = yield from $this->getWorkerAndClient();
+
+            yield $worker->register($queueName, function (JobInterface $job) use ($worker) {
+                $worker->disconnect();
+                try {
+                    $job->complete($job->getWorkload());
+                    $this->fail("Job was completed on disconnected connection");
+                } catch (Exception $e) {
+                    // Expected
+                }
+            });
+
+            /**
+             * @var TaskInterface $task
+             */
+            $task = yield $client->submit($queueName, 'TestData');
+
+            try {
+                yield $this->getTaskPromise($task, function (TaskDataEvent $event, ClientInterface $client) use (&$responseReceived) {
+                    $this->assertEquals('TestData', $event->getData());
+                });
+                $this->fail("Job did not time out");
+            } catch (Exception $e) {
+                $client->cancel($task);
+                $this->assertEquals("Job timed out: TestData", $e->getMessage());
+            }
         });
     }
 }

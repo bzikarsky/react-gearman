@@ -8,7 +8,6 @@ use Zikarsky\React\Gearman\Event\TaskDataEvent;
 use Zikarsky\React\Gearman\Event\TaskEvent;
 use Zikarsky\React\Gearman\ClientInterface;
 use React\Promise\FulfilledPromise;
-use Zikarsky\React\Gearman\UnknownTask;
 
 class ClientTest extends PHPUnit_Framework_TestCase
 {
@@ -87,11 +86,18 @@ class ClientTest extends PHPUnit_Framework_TestCase
 
     /**
      * @dataProvider taskCommandProvider
-     * @expectedException \Zikarsky\React\Gearman\Command\Exception
      */
     public function testInvalidUnknownTaskCommand($command)
     {
+    	$called = false;
+    	$this->client->once('task-unknown', function($handle, $commandName) use (&$called, $command) {
+    		$this->assertEquals('unknown', $handle);
+		    $this->assertEquals($command, $commandName);
+		    $called = true;
+	    });
+
         $this->respond($command, ["job_handle" => "unknown"]);
+        $this->assertTrue($called);
     }
 
     public function testWorkStatusEvent()
