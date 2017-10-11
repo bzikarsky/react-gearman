@@ -2,6 +2,7 @@
 
 namespace Zikarsky\React\Gearman;
 
+use React\Promise\Deferred;
 use Zikarsky\React\Gearman\Protocol\Connection;
 use Zikarsky\React\Gearman\Protocol\Participant;
 use Zikarsky\React\Gearman\Command\Binary\CommandInterface;
@@ -19,6 +20,21 @@ class Worker extends Participant implements WorkerInterface
      * @var int
      */
     protected $inflightRequests = 0;
+
+    /**
+     * @var bool
+     */
+    protected $acceptNewJobs = true;
+
+    /**
+     * @var int
+     */
+    protected $grabsInFlight = 0;
+
+    /**
+     * @var Deferred
+     */
+    protected $shutdownPromise = null;
 
     public function __construct(Connection $connection)
     {
@@ -127,53 +143,107 @@ class Worker extends Participant implements WorkerInterface
         parent::disconnect();
     }
 
+    public function shutdown()
+    {
+        if ($this->shutdownPromise === null) {
+            $this->shutdownPromise = new Deferred();
+            $this->pause();
+        }
+
+        return $this->shutdownPromise->promise();
+    }
+
+    /**
+     * Stop accepting new jobs
+     */
+    public function pause()
+    {
+        $this->acceptNewJobs = false;
+        if ($this->grabsInFlight <= 0) {
+            $this->getConnection()->stream->pause();
+        }
+    }
+
+    /**
+     * Accept new jobs again
+     */
+    public function resume()
+    {
+        if ($this->shutdownPromise !== null) {
+            throw new \RuntimeException("Worker is shutting down");
+        }
+        $this->acceptNewJobs = true;
+        $this->getConnection()->stream->resume();
+        $this->grabJob();
+    }
+
     protected function grabJob()
     {
-        $this->inflightRequests++;
-
-        $this->grabJobSend();
+	    if ($this->acceptNewJobs && $this->inflightRequests < $this->maxParallelRequests) {
+            $this->inflightRequests++;
+            $this->grabJobSend();
+        }
     }
 
     protected function grabJobSend()
     {
         $grab = $this->getCommandFactory()->create('GRAB_JOB');
         $this->send($grab);
+        $this->grabsInFlight++;
+    }
+
+    protected function handleGrabJobResponse()
+    {
+        $this->grabsInFlight--;
+        if ($this->grabsInFlight <= 0 && !$this->acceptNewJobs) {
+            $this->getConnection()->stream->pause();
+        }
+
+        return $this->acceptNewJobs;
     }
 
     protected function handleNoJob()
     {
-        $this->inflightRequests--;
-
-        $preSleep = $this->getCommandFactory()->create('PRE_SLEEP');
-        $this->send($preSleep);
+        $this->onInflightDone();
+        $this->handleGrabJobResponse();
+        if ($this->acceptNewJobs) {
+            $preSleep = $this->getCommandFactory()->create('PRE_SLEEP');
+            $this->send($preSleep);
+        }
     }
 
-    protected function grabJobIfAvailable()
+    protected function onInflightDone()
     {
-        if ($this->inflightRequests < $this->maxParallelRequests) {
-            $this->grabJob();
+        $this->inflightRequests--;
+        if ($this->inflightRequests <= 0 && $this->shutdownPromise !== null) {
+            $this->disconnect();
+            $this->shutdownPromise->resolve();
         }
     }
 
     protected function handleJob(CommandInterface $command)
     {
         $job = Job::FromCommand($command, function ($command, array $payload) {
-            return $this->send($this->getCommandFactory()->create($command, $payload));
+            $promise = $this->send($this->getCommandFactory()->create($command, $payload));
+            // grab next job, when this one is completed or failed
+            if (in_array($command, ['WORK_COMPLETE', 'WORK_FAIL'])) {
+                $promise->then(function () {
+                    $this->onInflightDone();
+                    $this->grabJob();
+                }, function () {
+                    $this->onInflightDone();
+                    $this->grabJob();
+                });
+            }
+            return $promise;
         });
 
         if (!isset($this->functions[$job->getFunction()])) {
             throw new \LogicException("Got job for unknown function {$job->getFunction()}");
         }
 
-        // grab next job, when this one is completed or failed
-        $job->on('status-change', function ($status, JobInterface $job) {
-            if (in_array($status, [JobInterface::STATUS_COMPLETED, JobInterface::STATUS_FAILED])) {
-                $this->inflightRequests--;
-                $this->grabJobIfAvailable();
-            }
-        });
-
-        $this->grabJobIfAvailable();
+        $this->handleGrabJobResponse();
+        $this->grabJob();
 
         // announce new job and call callback if registered
         $this->emit('new-job', [$job, $this]);

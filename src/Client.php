@@ -267,6 +267,7 @@ class Client extends Participant implements ClientInterface
     public function cancel(TaskInterface $task)
     {
         $task->removeAllListeners();
+        $this->setTaskDone($task);
     }
 
     /**
@@ -290,7 +291,8 @@ class Client extends Participant implements ClientInterface
         $task = $this->getTaskByHandle($handle);
 
         if ($task === null) {
-            throw new ProtocolException("Unexpected $command. Task unknown");
+            $this->emit('task-unknown', [$handle, $command->getName()]);
+            return;
         }
 
         switch ($command->getName()) {

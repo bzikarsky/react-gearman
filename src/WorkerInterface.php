@@ -81,4 +81,22 @@ interface WorkerInterface
      * @return mixed
      */
     public function setMaxParallelRequests($maxParallelRequests);
+
+    /**
+     * Stop accepting new jobs
+     */
+#	public function pause();
+
+    /**
+     * Accept new jobs again
+     */
+#	public function resume();
+
+    /**
+     * Shutdown worker gracefully
+     * Stop accepting new jobs, Process all pending jobs, then disconnect
+     *
+     * @return Promise
+     */
+#	public function shutdown();
 }

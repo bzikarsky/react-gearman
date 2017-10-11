@@ -68,6 +68,13 @@ interface ClientInterface
     public function getStatus($task);
 
     /**
+     * Cancel a task and its promise resolution
+     *
+     * @param  string|TaskInterface $task
+     */
+    public function cancel(TaskInterface $task);
+
+    /**
      * Disconnects the client from the server
      */
     public function disconnect();
