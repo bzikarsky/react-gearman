@@ -85,12 +85,17 @@ interface WorkerInterface
     /**
      * Stop accepting new jobs
      */
-#	public function pause();
+    public function pause();
 
     /**
      * Accept new jobs again
      */
-#	public function resume();
+    public function resume();
+
+    /**
+     * @return JobInterface[]
+     */
+    public function getRunningJobs();
 
     /**
      * Shutdown worker gracefully
@@ -98,5 +103,5 @@ interface WorkerInterface
      *
      * @return Promise
      */
-#	public function shutdown();
+    public function shutdown();
 }
