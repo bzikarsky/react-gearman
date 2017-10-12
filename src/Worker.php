@@ -36,6 +36,11 @@ class Worker extends Participant implements WorkerInterface
      */
     protected $shutdownPromise = null;
 
+    /**
+     * @var JobInterface[]
+     */
+    protected $runningJobs = [];
+
     public function __construct(Connection $connection)
     {
         parent::__construct($connection);
@@ -47,6 +52,14 @@ class Worker extends Participant implements WorkerInterface
         // responses to a grabJob
         $this->getConnection()->on('NO_JOB', [$this, 'handleNoJob']);
         $this->getConnection()->on('JOB_ASSIGN', [$this, 'handleJob']);
+    }
+
+    /**
+     * @return JobInterface[]
+     */
+    public function getRunningJobs()
+    {
+        return $this->runningJobs;
     }
 
     /**
@@ -147,10 +160,24 @@ class Worker extends Participant implements WorkerInterface
     {
         if ($this->shutdownPromise === null) {
             $this->shutdownPromise = new Deferred();
-            $this->pause();
+            if ($this->inflightRequests == 0) {
+                $this->doShutdown();
+            } else {
+                $this->pause();
+            }
         }
 
         return $this->shutdownPromise->promise();
+    }
+
+    protected function doShutdown()
+    {
+        try {
+            $this->disconnect();
+            $this->shutdownPromise->resolve();
+        } catch (\Throwable $e) {
+            $this->shutdownPromise->reject($e);
+        }
     }
 
     /**
@@ -179,7 +206,7 @@ class Worker extends Participant implements WorkerInterface
 
     protected function grabJob()
     {
-	    if ($this->acceptNewJobs && $this->inflightRequests < $this->maxParallelRequests) {
+        if ($this->acceptNewJobs && $this->inflightRequests < $this->maxParallelRequests) {
             $this->inflightRequests++;
             $this->grabJobSend();
         }
@@ -216,8 +243,7 @@ class Worker extends Participant implements WorkerInterface
     {
         $this->inflightRequests--;
         if ($this->inflightRequests <= 0 && $this->shutdownPromise !== null) {
-            $this->disconnect();
-            $this->shutdownPromise->resolve();
+            $this->doShutdown();
         }
     }
 
@@ -226,11 +252,14 @@ class Worker extends Participant implements WorkerInterface
         $job = Job::FromCommand($command, function ($command, array $payload) {
             $promise = $this->send($this->getCommandFactory()->create($command, $payload));
             // grab next job, when this one is completed or failed
-            if (in_array($command, ['WORK_COMPLETE', 'WORK_FAIL'])) {
-                $promise->then(function () {
+            if (in_array($command, ['WORK_COMPLETE', 'WORK_FAIL', 'WORK_EXCEPTION'])) {
+                $handle = $payload['job_handle'];
+                $promise->then(function () use ($handle) {
+                    unset($this->runningJobs[$handle]);
                     $this->onInflightDone();
                     $this->grabJob();
-                }, function () {
+                }, function () use ($handle) {
+                    unset($this->runningJobs[$handle]);
                     $this->onInflightDone();
                     $this->grabJob();
                 });
@@ -247,6 +276,7 @@ class Worker extends Participant implements WorkerInterface
 
         // announce new job and call callback if registered
         $this->emit('new-job', [$job, $this]);
+        $this->runningJobs[$job->getHandle()] = $job;
         $callback = $this->functions[$job->getFunction()];
         if (is_callable($callback)) {
             $callback($job);

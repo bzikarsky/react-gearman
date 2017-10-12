@@ -3,6 +3,7 @@
 namespace Zikarsky\React\Gearman\Protocol;
 
 use Evenement\EventEmitter;
+use React\Promise\RejectedPromise;
 use Zikarsky\React\Gearman\Command\Binary\CommandFactoryInterface;
 use Zikarsky\React\Gearman\Command\Binary\CommandInterface;
 use Zikarsky\React\Gearman\Command\Binary\ReadBuffer;
@@ -139,7 +140,7 @@ class Connection extends EventEmitter
     public function send(CommandInterface $command)
     {
         if ($this->isClosed()) {
-            throw new BadMethodCallException("Connection is closed. Cannot send commands anymore");
+            return new RejectedPromise(new BadMethodCallException("Connection is closed. Cannot send commands anymore"));
         }
 
         $deferred = new Deferred();
