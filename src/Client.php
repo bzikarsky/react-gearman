@@ -68,6 +68,12 @@ class Client extends Participant implements ClientInterface
         }
 
         $this->getConnection()->stream->pause();
+        $this->on("close", function () {
+            foreach ($this->tasks as $task) {
+                $task->emit('exception', [new TaskDataEvent($task, 'Lost connection'), $this]);
+                $this->setTaskDone($task);
+            }
+        });
     }
 
     /**
