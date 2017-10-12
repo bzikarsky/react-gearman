@@ -25,9 +25,9 @@ class DefaultCommandFactoryTest extends PHPUnit_Framework_TestCase
     public function testWorkFailCommand()
     {
         $jobHandle = 'H:toto:42';
-        $length = strlen($jobHandle) + 1;
+        $length = strlen($jobHandle);
         $type = 14;
-        $rawCommand = "\x00RES".pack('N', $type).pack('N', $length).$jobHandle."\x00";
+        $rawCommand = "\x00RES".pack('N', $type).pack('N', $length).$jobHandle;
 
         $factory = new \Zikarsky\React\Gearman\Command\Binary\DefaultCommandFactory();
 
