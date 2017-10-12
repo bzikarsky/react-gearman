@@ -36,6 +36,21 @@ class ClientTest extends PHPUnit_Framework_TestCase
 
     public function testCloseEvent()
     {
+        // Create a task first
+        $promiseTask = null;
+
+        $this->client->submit("test", "data", TaskInterface::PRIORITY_HIGH, '')->then(function ($createdTask) use (&$promiseTask) {
+            $promiseTask = $createdTask;
+        });
+        $this->respond("JOB_CREATED", ["job_handle" => "test.job"]);
+
+        $this->assertNotNull($promiseTask);
+        $failedWith = null;
+        $promiseTask->on('exception', function (TaskDataEvent $event) use (&$failedWith) {
+            $failedWith = $event->getData();
+        });
+
+        // Then expect task to fail
         $closeCalled = false;
         $this->client->on("close", function () use (&$closeCalled) {
             $closeCalled = true;
@@ -43,6 +58,7 @@ class ClientTest extends PHPUnit_Framework_TestCase
 
         $this->connection->emit("close");
         $this->assertTrue($closeCalled);
+        $this->assertEquals('Lost connection', $failedWith);
 
         return $this->client;
     }
@@ -89,12 +105,12 @@ class ClientTest extends PHPUnit_Framework_TestCase
      */
     public function testInvalidUnknownTaskCommand($command)
     {
-    	$called = false;
-    	$this->client->once('task-unknown', function($handle, $commandName) use (&$called, $command) {
-    		$this->assertEquals('unknown', $handle);
-		    $this->assertEquals($command, $commandName);
-		    $called = true;
-	    });
+        $called = false;
+        $this->client->once('task-unknown', function ($handle, $commandName) use (&$called, $command) {
+            $this->assertEquals('unknown', $handle);
+            $this->assertEquals($command, $commandName);
+            $called = true;
+        });
 
         $this->respond($command, ["job_handle" => "unknown"]);
         $this->assertTrue($called);
