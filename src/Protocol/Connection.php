@@ -41,7 +41,7 @@ class Connection extends EventEmitter
     /**
      * @var Stream
      */
-    public $stream;
+    protected $stream;
 
     /**
      * @var CommandFactoryInterface
@@ -104,6 +104,16 @@ class Connection extends EventEmitter
     public function setLogger(LoggerInterface $logger)
     {
         $this->logger = $logger;
+    }
+
+    public function pause()
+    {
+        $this->stream->pause();
+    }
+
+    public function resume()
+    {
+        $this->stream->resume();
     }
 
     /**

@@ -187,7 +187,7 @@ class Worker extends Participant implements WorkerInterface
     {
         $this->acceptNewJobs = false;
         if ($this->grabsInFlight <= 0) {
-            $this->getConnection()->stream->pause();
+            $this->getConnection()->pause();
         }
     }
 
@@ -200,7 +200,7 @@ class Worker extends Participant implements WorkerInterface
             throw new \RuntimeException("Worker is shutting down");
         }
         $this->acceptNewJobs = true;
-        $this->getConnection()->stream->resume();
+        $this->getConnection()->resume();
         $this->grabJob();
     }
 
@@ -223,7 +223,7 @@ class Worker extends Participant implements WorkerInterface
     {
         $this->grabsInFlight--;
         if ($this->grabsInFlight <= 0 && !$this->acceptNewJobs) {
-            $this->getConnection()->stream->pause();
+            $this->getConnection()->pause();
         }
 
         return $this->acceptNewJobs;
