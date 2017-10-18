@@ -25,9 +25,18 @@ abstract class Participant extends EventEmitter
     private $connection;
 
     /**
-     * @var Promise
+     * Queued requests to be sent, requests are enqueued if send is currently locked
+     *
+     * @var array
      */
-    private $sendLock = null;
+    protected $sendQueue = [];
+
+    /**
+     * If send is currently locked
+     *
+     * @var bool
+     */
+    protected $sendLocked = false;
 
     /**
      * Creates an Participant and registers handlers for packets not handled by the actual particpant and
@@ -155,15 +164,8 @@ abstract class Participant extends EventEmitter
      */
     private function sendDeferred(CommandInterface $command, Deferred $deferred, Promise $lock = null)
     {
-        // if there is already a blocking operations
-        // queue all other send-requests until finished
-        if ($this->sendLock) {
-            $this->sendLock->then(
-                function () use ($command, $lock, $deferred) {
-                    $this->sendDeferred($command, $deferred, $lock);
-                }
-            );
-
+        if ($this->sendLocked === true) {
+            $this->sendQueue[] = [$command, $deferred, $lock];
             return;
         }
 
@@ -172,16 +174,17 @@ abstract class Participant extends EventEmitter
         //  - install a resolve-handler which removes the lock
         //  - install an error-handler to communicate the failure
         if ($lock) {
+            $this->sendLocked = true;
             $lock->then(
                 function () {
-                    $this->sendLock = null;
+                    $this->sendLocked = false;
+                    list($command, $deferred, $lock) = array_shift($this->sendQueue);
+                    $this->sendDeferred($command, $deferred, $lock);
                 },
                 function () {
                     throw new ProtocolException("Blocking operation failed. Protocol is in invalid state");
                 }
             );
-
-            $this->sendLock = $lock;
         }
 
         // write the command
