@@ -67,7 +67,7 @@ class Client extends Participant implements ClientInterface
             $this->getConnection()->on($event, [$this, 'handleWorkEvent']);
         }
 
-        $this->getConnection()->stream->pause();
+        $this->getConnection()->pause();
         $this->on("close", function () {
             foreach ($this->tasks as $task) {
                 $task->emit('exception', [new TaskDataEvent($task, 'Lost connection'), $this]);
@@ -348,16 +348,11 @@ class Client extends Participant implements ClientInterface
         }
     }
 
-    protected function getSocket()
-    {
-        return $this->getConnection()->stream->stream;
-    }
-
     protected function blockingActionStart()
     {
         parent::blockingActionStart();
         $this->pendingActions++;
-        $this->getConnection()->stream->resume();
+        $this->getConnection()->resume();
     }
 
     protected function blockingActionEnd()
@@ -371,7 +366,7 @@ class Client extends Participant implements ClientInterface
     protected function taskStart()
     {
         if (count($this->tasks) == 0) {
-            $this->getConnection()->stream->resume();
+            $this->getConnection()->resume();
         }
     }
 
@@ -388,7 +383,7 @@ class Client extends Participant implements ClientInterface
     protected function disableReadableIfNoTasks()
     {
         if (!$this->hasPendingTasks()) {
-            $this->getConnection()->stream->pause();
+            $this->getConnection()->pause();
             foreach ($this->waitingPromises as $promise) {
                 $promise->resolve();
             }
