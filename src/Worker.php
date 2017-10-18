@@ -242,7 +242,12 @@ class Worker extends Participant implements WorkerInterface
     protected function onInflightDone()
     {
         $this->inflightRequests--;
-        if ($this->inflightRequests <= 0 && $this->shutdownPromise !== null) {
+    }
+
+    protected function onJobDone($handle)
+    {
+        unset($this->runningJobs[$handle]);
+        if (count($this->runningJobs) == 0 && $this->shutdownPromise !== null) {
             $this->doShutdown();
         }
     }
@@ -251,17 +256,18 @@ class Worker extends Participant implements WorkerInterface
     {
         $job = Job::FromCommand($command, function ($command, array $payload) {
             $promise = $this->send($this->getCommandFactory()->create($command, $payload));
-            // grab next job, when this one is completed or failed
+            // Intercept commands that finish a job
             if (in_array($command, ['WORK_COMPLETE', 'WORK_FAIL', 'WORK_EXCEPTION'])) {
                 $handle = $payload['job_handle'];
+                // Grab new job as soon as job is marked as completed
+                $this->onInflightDone();
+                $this->grabJob();
+
+                // Mark job as done only if status has been sent successfully
                 $promise->then(function () use ($handle) {
-                    unset($this->runningJobs[$handle]);
-                    $this->onInflightDone();
-                    $this->grabJob();
+                    $this->onJobDone($handle);
                 }, function () use ($handle) {
-                    unset($this->runningJobs[$handle]);
-                    $this->onInflightDone();
-                    $this->grabJob();
+                    $this->onJobDone($handle);
                 });
             }
             return $promise;
