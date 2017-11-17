@@ -11,18 +11,17 @@ matrix:
 
 before_script:
   - sudo apt-get install -y gearman-job-server
-  - composer self-update
   - composer install
 
 script:
   - bin/phpunit --coverage-text --verbose
   - bin/php-cs-fixer fix --dry-run --diff -vv
-  
+
 sudo: true
+dist: trusty
 
 notifications:
   email:
     - travis@b-zik.de
 
-# HHVM precise builds are broken
-dist: trusty
+
