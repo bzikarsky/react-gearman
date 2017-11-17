@@ -178,8 +178,10 @@ abstract class Participant extends EventEmitter
             $lock->then(
                 function () {
                     $this->sendLocked = false;
-                    list($command, $deferred, $lock) = array_shift($this->sendQueue);
-                    $this->sendDeferred($command, $deferred, $lock);
+                    if (!empty($this->sendQueue)) {
+                        list($command, $deferred, $lock) = array_shift($this->sendQueue);
+                        $this->sendDeferred($command, $deferred, $lock);
+                    }
                 },
                 function () {
                     throw new ProtocolException("Blocking operation failed. Protocol is in invalid state");
