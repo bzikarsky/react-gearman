@@ -70,8 +70,8 @@ class Client extends Participant implements ClientInterface
         $this->getConnection()->pause();
         $this->on("close", function () {
             foreach ($this->tasks as $task) {
-                $task->emit('exception', [new TaskDataEvent($task, 'Lost connection'), $this]);
                 $this->setTaskDone($task);
+                $task->emit('exception', [new TaskDataEvent($task, 'Lost connection'), $this]);
             }
         });
     }
@@ -272,8 +272,8 @@ class Client extends Participant implements ClientInterface
 
     public function cancel(TaskInterface $task)
     {
-        $task->removeAllListeners();
         $this->setTaskDone($task);
+        $task->removeAllListeners();
     }
 
     /**
@@ -305,6 +305,7 @@ class Client extends Participant implements ClientInterface
             case "WORK_COMPLETE":
                 // There can be multiple tasks for a single handle. This can happen if > 1 tasks are submitted with the same unique id from the same client
                 // WORK_COMPLETE is triggered for every submitted task. So only process a single one
+                $this->setTaskDone($task);
                 $task->emit('complete', [
                     new TaskDataEvent(
                         $task,
@@ -312,7 +313,6 @@ class Client extends Participant implements ClientInterface
                     ),
                     $this
                 ]);
-                $this->setTaskDone($task);
                 break;
             case "WORK_STATUS":
                 $task->emit('status', [
@@ -327,12 +327,12 @@ class Client extends Participant implements ClientInterface
                 ]);
                 break;
             case "WORK_FAIL":
-                $task->emit('failure', [new TaskEvent($task), $this]);
                 $this->setTaskDone($task);
+                $task->emit('failure', [new TaskEvent($task), $this]);
                 break;
             case "WORK_EXCEPTION":
-                $task->emit('exception', [new TaskDataEvent($task, $command->get(CommandInterface::DATA)), $this]);
                 $this->setTaskDone($task);
+                $task->emit('exception', [new TaskDataEvent($task, $command->get(CommandInterface::DATA)), $this]);
                 break;
             case "WORK_DATA":
                 $task->emit('data', [new TaskDataEvent($task, $command->get(CommandInterface::DATA)), $this]);
