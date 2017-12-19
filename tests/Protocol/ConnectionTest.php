@@ -60,15 +60,11 @@ class ConnectionTest extends PHPUnit_Framework_TestCase
 
     /**
      * @depends testStreamClose
+     * @expectedException BadMethodCallException
      */
     public function testSendFailOnClosedConnection(Connection $connection)
     {
-        $thrown = null;
-        $connection->send($this->packet)->otherwise(function ($e) use (&$thrown) {
-            $thrown = $e;
-        });
-
-        $this->assertInstanceOf(BadMethodCallException::class, $thrown);
+        $connection->send($this->packet);
     }
 
     public function testHandledPacketEvent()

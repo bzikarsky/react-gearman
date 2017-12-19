@@ -37,6 +37,11 @@ class Worker extends Participant implements WorkerInterface
     protected $shutdownPromise = null;
 
     /**
+     * @var bool
+     */
+    protected $isShutDown = false;
+
+    /**
      * @var JobInterface[]
      */
     protected $runningJobs = [];
@@ -52,6 +57,10 @@ class Worker extends Participant implements WorkerInterface
         // responses to a grabJob
         $this->getConnection()->on('NO_JOB', [$this, 'handleNoJob']);
         $this->getConnection()->on('JOB_ASSIGN', [$this, 'handleJob']);
+
+        $this->on('close', function() {
+            $this->finishShutdown();
+        });
     }
 
     /**
@@ -156,13 +165,19 @@ class Worker extends Participant implements WorkerInterface
         parent::disconnect();
     }
 
-    public function shutdown()
-    {
+    public function forceShutdown() {
+        $this->runningJobs = [];
+        $this->initShutdown();
+        return $this->shutdownPromise->promise();
+    }
+
+    public function shutdown() {
         if ($this->shutdownPromise === null) {
-            $this->shutdownPromise = new Deferred();
-            if ($this->inflightRequests == 0) {
-                $this->doShutdown();
-            } else {
+            $this->shutdownPromise = $shutdown = new Deferred();
+            if (count($this->runningJobs) == 0) {
+                $this->initShutdown();
+            }
+            else {
                 $this->pause();
             }
         }
@@ -170,14 +185,23 @@ class Worker extends Participant implements WorkerInterface
         return $this->shutdownPromise->promise();
     }
 
-    protected function doShutdown()
-    {
-        try {
-            $this->disconnect();
-            $this->shutdownPromise->resolve();
-        } catch (\Throwable $e) {
-            $this->shutdownPromise->reject($e);
+    protected function finishShutdown() {
+        // Avoid race condition between direct shutdown + close listener, avoid double shutdown
+        $this->runningJobs = [];
+        if (!$this->isShutDown) {
+            $this->isShutDown = true;
+            try {
+                $this->shutdownPromise->resolve();
+            }
+            catch (\Throwable $e) {
+                $this->shutdownPromise->reject($e);
+            }
         }
+    }
+
+    protected function initShutdown() {
+        $this->disconnect();
+        $this->finishShutdown();
     }
 
     /**
@@ -248,7 +272,7 @@ class Worker extends Participant implements WorkerInterface
     {
         unset($this->runningJobs[$handle]);
         if (count($this->runningJobs) == 0 && $this->shutdownPromise !== null) {
-            $this->doShutdown();
+            $this->initShutdown();
         }
     }
 

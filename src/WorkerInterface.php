@@ -104,4 +104,12 @@ interface WorkerInterface
      * @return Promise
      */
     public function shutdown();
+
+    /**
+     * Shut down immediately. Do not wait for jobs to finish
+     *
+     * @return Promise
+     */
+    public function forceShutdown();
+
 }
