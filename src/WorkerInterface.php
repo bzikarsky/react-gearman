@@ -111,5 +111,4 @@ interface WorkerInterface
      * @return Promise
      */
     public function forceShutdown();
-
 }

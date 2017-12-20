@@ -58,7 +58,7 @@ class Worker extends Participant implements WorkerInterface
         $this->getConnection()->on('NO_JOB', [$this, 'handleNoJob']);
         $this->getConnection()->on('JOB_ASSIGN', [$this, 'handleJob']);
 
-        $this->on('close', function() {
+        $this->on('close', function () {
             $this->finishShutdown();
         });
     }
@@ -165,19 +165,20 @@ class Worker extends Participant implements WorkerInterface
         parent::disconnect();
     }
 
-    public function forceShutdown() {
+    public function forceShutdown()
+    {
         $this->runningJobs = [];
         $this->initShutdown();
         return $this->shutdownPromise->promise();
     }
 
-    public function shutdown() {
+    public function shutdown()
+    {
         if ($this->shutdownPromise === null) {
             $this->shutdownPromise = $shutdown = new Deferred();
             if (count($this->runningJobs) == 0) {
                 $this->initShutdown();
-            }
-            else {
+            } else {
                 $this->pause();
             }
         }
@@ -185,21 +186,24 @@ class Worker extends Participant implements WorkerInterface
         return $this->shutdownPromise->promise();
     }
 
-    protected function finishShutdown() {
+    protected function finishShutdown()
+    {
         // Avoid race condition between direct shutdown + close listener, avoid double shutdown
         $this->runningJobs = [];
         if (!$this->isShutDown) {
             $this->isShutDown = true;
-            try {
-                $this->shutdownPromise->resolve();
-            }
-            catch (\Throwable $e) {
-                $this->shutdownPromise->reject($e);
+            if ($this->shutdownPromise !== null) {
+                try {
+                    $this->shutdownPromise->resolve();
+                } catch (\Throwable $e) {
+                    $this->shutdownPromise->reject($e);
+                }
             }
         }
     }
 
-    protected function initShutdown() {
+    protected function initShutdown()
+    {
         $this->disconnect();
         $this->finishShutdown();
     }
