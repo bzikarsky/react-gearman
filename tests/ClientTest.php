@@ -376,6 +376,28 @@ class ClientTest extends PHPUnit_Framework_TestCase
         $this->assertInstanceOf(\Zikarsky\React\Gearman\ConnectionLostException::class, $exception);
     }
 
+    public function testSubmitAfterLostConnection()
+    {
+        $this->connection->expects($this->exactly(2))->method('send')->will($this->returnValue(new FulfilledPromise()));
+
+        $this->client->submit('func', 'data');
+        $this->connection->emit('close');
+
+        // Second action must also produce a send call on the connection
+        $this->client->submit('func', 'data');
+    }
+
+    public function testSubmitAfterLostConnection2()
+    {
+        $this->connection->expects($this->exactly(2))->method('send')->will($this->returnValue(new FulfilledPromise()));
+
+        $this->client->submit('func', 'data');
+        // Second action must also produce a send call on the connection
+        $this->client->submit('func', 'data');
+
+        $this->connection->emit('close');
+    }
+
     public function testSetOption()
     {
         $confirmed = false;

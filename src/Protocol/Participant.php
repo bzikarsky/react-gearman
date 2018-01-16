@@ -186,18 +186,15 @@ abstract class Participant extends EventEmitter
         //  - install an error-handler to communicate the failure
         if ($lock) {
             $this->sendLocked = true;
-            $lock->then(
-                function () {
-                    $this->sendLocked = false;
-                    if (!empty($this->sendQueue)) {
-                        list($command, $deferred, $lock) = array_shift($this->sendQueue);
-                        $this->sendDeferred($command, $deferred, $lock);
-                    }
-                },
-                function () {
-                    throw new ProtocolException("Blocking operation failed. Protocol is in invalid state");
+            $doUnlock = function () {
+                $this->sendLocked = false;
+                if (!empty($this->sendQueue)) {
+                    list($command, $deferred, $lock) = array_shift($this->sendQueue);
+                    $this->sendDeferred($command, $deferred, $lock);
                 }
-            );
+            };
+            // Also unlock if previous command failed, otherwise there is a deadlock when issueing a blocked command after a failure
+            $lock->then($doUnlock, $doUnlock);
         }
 
         // write the command
