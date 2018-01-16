@@ -18,12 +18,13 @@ class ClientTest extends PHPUnit_Framework_TestCase
     protected $connection;
     protected $client;
     protected $factory;
+    protected $buffer;
 
     public function setUp()
     {
         $stream = $this->createMock(\React\Stream\Stream::class);
-        $buffer = $this->createMock(\React\Stream\Buffer::class);
-        $stream->expects($this->any())->method('getBuffer')->willReturn($buffer);
+        $this->buffer = $this->createPartialMock(\React\Stream\Buffer::class, ['isWritable']);
+        $stream->expects($this->any())->method('getBuffer')->willReturn($this->buffer);
         $this->factory = new \Zikarsky\React\Gearman\Command\Binary\DefaultCommandFactory();
 
         $this->connection = $this->getMockBuilder(\Zikarsky\React\Gearman\Protocol\Connection::class)
@@ -303,6 +304,76 @@ class ClientTest extends PHPUnit_Framework_TestCase
         }
 
         return $eventTask;
+    }
+
+    public function testSubmitBackgroundWithLostConnectionBeforeWrite()
+    {
+        $promiseTask = null;
+        $exception = null;
+
+        // Connection is lost before command has been written
+        $this->client->submitBackground('func', 'data')->then(function ($createdTask) use (&$promiseTask) {
+            $promiseTask = $createdTask;
+        }, function ($e) use (&$exception) {
+            $exception = $e;
+        });
+        $this->connection->emit('close');
+
+        $this->assertNull($promiseTask);
+        $this->assertInstanceOf(\Zikarsky\React\Gearman\ConnectionLostException::class, $exception);
+    }
+
+    public function testSubmitBackgroundWithLostConnectionAfterWrite()
+    {
+        // Connection is lost after command has been written but no response received
+        $promiseTask = null;
+        $exception = null;
+
+        $this->client->submitBackground('func', 'data')->then(function ($createdTask) use (&$promiseTask) {
+            $promiseTask = $createdTask;
+        }, function ($e) use (&$exception) {
+            $exception = $e;
+        });
+        $this->buffer->emit('full-drain');
+        $this->connection->emit('close');
+
+        $this->assertNull($promiseTask);
+        $this->assertInstanceOf(\Zikarsky\React\Gearman\ConnectionLostException::class, $exception);
+    }
+
+    public function testSubmitWithLostConnectionBeforeWrite()
+    {
+        $eventTask = null;
+        $promiseTask = null;
+        $exception = null;
+
+        $this->client->submit('func', 'data')->then(function ($createdTask) use (&$promiseTask) {
+            $promiseTask = $createdTask;
+        }, function ($e) use (&$exception) {
+            $exception = $e;
+        });
+        $this->connection->emit('close');
+
+        $this->assertNull($promiseTask);
+        $this->assertInstanceOf(\Zikarsky\React\Gearman\ConnectionLostException::class, $exception);
+    }
+
+    public function testSubmitWithLostConnectionAfterWrite()
+    {
+        // Connection is lost after command has been written but no response received
+        $promiseTask = null;
+        $exception = null;
+
+        $this->client->submit('func', 'data')->then(function ($createdTask) use (&$promiseTask) {
+            $promiseTask = $createdTask;
+        }, function ($e) use (&$exception) {
+            $exception = $e;
+        });
+        $this->buffer->emit('full-drain');
+        $this->connection->emit('close');
+
+        $this->assertNull($promiseTask);
+        $this->assertInstanceOf(\Zikarsky\React\Gearman\ConnectionLostException::class, $exception);
     }
 
     public function testSetOption()

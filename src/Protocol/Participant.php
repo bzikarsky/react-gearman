@@ -8,6 +8,7 @@ use Zikarsky\React\Gearman\Command\Binary\CommandFactoryInterface;
 use Zikarsky\React\Gearman\Command\Exception as ProtocolException;
 use React\Promise\Promise;
 use React\Promise\Deferred;
+use Zikarsky\React\Gearman\ConnectionLostException;
 
 /**
  * A participant is a async participant in the Gearman protocol, such as Clients, Workers and Servers
@@ -98,8 +99,8 @@ abstract class Participant extends EventEmitter
      * All other sent commands are queued until the handler resolves the initial action-promise
      *
      * @param  CommandInterface $command
-     * @param  string           $eventName
-     * @param  callable         $handler
+     * @param  string $eventName
+     * @param  callable $handler
      * @return Promise
      */
     protected function blockingAction(CommandInterface $command, $eventName, callable $handler)
@@ -111,11 +112,16 @@ abstract class Participant extends EventEmitter
 
         // send command
         $this->send($command, $actionPromise)->then(
-            // as soon as the command is sent, register a one-time event-handler
-            // on the expected response event, which executes the handler
+        // as soon as the command is sent, register a one-time event-handler
+        // on the expected response event, which executes the handler
             function (CommandInterface $sentCommand) use ($deferred, $eventName, $handler) {
-                $this->connection->once($eventName, function (CommandInterface $recvCommand) use ($sentCommand, $deferred, $handler) {
-
+                $successListener = null;
+                $failListener = function () use ($deferred, $eventName, &$successListener) {
+                    $this->connection->removeListener($eventName, $successListener);
+                    $deferred->reject(new ConnectionLostException());
+                };
+                $successListener = function (CommandInterface $recvCommand) use ($sentCommand, $deferred, $handler, &$failListener) {
+                    $this->connection->removeListener('close', $failListener);
                     // if the result is not NULL resolve the deferred action with the handler's result
                     // if the result is NULL we assume the handler communicated the result on the passed in deferred
                     // itself
@@ -124,7 +130,12 @@ abstract class Participant extends EventEmitter
                         $this->blockingActionEnd();
                         $deferred->resolve($result);
                     }
-                });
+                };
+                $this->connection->once('close', $failListener);
+                $this->connection->once($eventName, $successListener);
+            },
+            function ($e) use ($deferred) {
+                $deferred->reject($e);
             }
         );
 
@@ -138,7 +149,7 @@ abstract class Participant extends EventEmitter
      * promise resolves
      *
      * @param  CommandInterface $command
-     * @param  Promise          $lock
+     * @param  Promise $lock
      * @return Promise
      */
     protected function send(CommandInterface $command, Promise $lock = null)
@@ -159,8 +170,8 @@ abstract class Participant extends EventEmitter
      * Other commands are queued until an optional promise resolves (unlocks)
      *
      * @param CommandInterface $command
-     * @param Deferred         $deferred
-     * @param Promise          $lock
+     * @param Deferred $deferred
+     * @param Promise $lock
      */
     private function sendDeferred(CommandInterface $command, Deferred $deferred, Promise $lock = null)
     {
@@ -193,6 +204,8 @@ abstract class Participant extends EventEmitter
         $this->connection->send($command)->then(function () use ($deferred, $command) {
             // resolve the the promise to send the data
             $deferred->resolve($command);
+        }, function ($e) use ($deferred) {
+            $deferred->reject($e);
         });
     }
 

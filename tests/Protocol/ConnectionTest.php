@@ -17,6 +17,11 @@ class ConnectionTest extends PHPUnit_Framework_TestCase
 
     public function setUp()
     {
+        $this->setUpStream();
+    }
+
+    protected function setUpStream()
+    {
         $this->type = new CommandType("TEST", 1, ["a", "b"]);
 
         $fac = new CommandFactory();
@@ -69,6 +74,23 @@ class ConnectionTest extends PHPUnit_Framework_TestCase
         });
 
         $this->assertInstanceOf(BadMethodCallException::class, $thrown);
+    }
+
+    /**
+     * @depends testSendFailOnClosedConnection
+     */
+    public function testSendFailsWhenConnectionIsClosedDuringSend()
+    {
+        // Need to re-establish connection
+        $this->setUpStream();
+        $thrown = null;
+        $this->connection->send($this->packet)->otherwise(function ($e) use (&$thrown) {
+            $thrown = $e;
+        });
+        $this->stream->emit('close');
+
+        $this->assertTrue($this->connection->isClosed());
+        $this->assertInstanceOf(\Zikarsky\React\Gearman\ConnectionLostException::class, $thrown);
     }
 
     public function testHandledPacketEvent()

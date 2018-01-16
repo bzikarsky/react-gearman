@@ -14,6 +14,7 @@ use Psr\Log\NullLogger;
 use React\Stream\Stream;
 use React\Promise\Deferred;
 use BadMethodCallException;
+use Zikarsky\React\Gearman\ConnectionLostException;
 
 /**
  * The connection wraps around the non-async version of the protocol buffers
@@ -24,7 +25,6 @@ use BadMethodCallException;
  * @event close             When the connection closed "close" is emitted
  *
  * @author Benjamin Zikarsky <benjamin@zikarsky.de>
-
  */
 class Connection extends EventEmitter
 {
@@ -67,14 +67,14 @@ class Connection extends EventEmitter
      * Creates the connection on top of the async stream and with the given
      * command-factory/specification
      *
-     * @param Stream                  $stream
+     * @param Stream $stream
      * @param CommandFactoryInterface $commandFactory
      */
     public function __construct(Stream $stream, CommandFactoryInterface $commandFactory)
     {
         $this->commandFactory = $commandFactory;
-        $this->writeBuffer  = new WriteBuffer();
-        $this->readBuffer   = new ReadBuffer($commandFactory);
+        $this->writeBuffer = new WriteBuffer();
+        $this->readBuffer = new ReadBuffer($commandFactory);
         $this->stream = $stream;
         $this->logger = new NullLogger();
 
@@ -94,6 +94,11 @@ class Connection extends EventEmitter
                 $deferred->resolve();
             }
             $this->commandSendQueue = [];
+        });
+        $this->on('close', function () {
+            foreach ($this->commandSendQueue as $deferred) {
+                $deferred->reject(new ConnectionLostException());
+            }
         });
     }
 
@@ -143,7 +148,7 @@ class Connection extends EventEmitter
     /**
      * Sends a command over the stream
      *
-     * @param  CommandInterface       $command
+     * @param  CommandInterface $command
      * @throws BadMethodCallException when the connection is closed
      * @return \React\Promise\Promise|\React\Promise\PromiseInterface
      */
