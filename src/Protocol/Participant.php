@@ -117,11 +117,9 @@ abstract class Participant extends EventEmitter
             function (CommandInterface $sentCommand) use ($deferred, $eventName, $handler) {
                 $successListener = null;
                 $failListener = function () use ($deferred, $eventName, &$successListener) {
-                    $this->connection->removeListener($eventName, $successListener);
                     $deferred->reject(new ConnectionLostException());
                 };
-                $successListener = function (CommandInterface $recvCommand) use ($sentCommand, $deferred, $handler, &$failListener) {
-                    $this->connection->removeListener('close', $failListener);
+                $successListener = function (CommandInterface $recvCommand) use ($sentCommand, $deferred, $handler) {
                     // if the result is not NULL resolve the deferred action with the handler's result
                     // if the result is NULL we assume the handler communicated the result on the passed in deferred
                     // itself
@@ -131,8 +129,12 @@ abstract class Participant extends EventEmitter
                         $deferred->resolve($result);
                     }
                 };
-                $this->connection->once('close', $failListener);
-                $this->connection->once($eventName, $successListener);
+                $deferred->promise()->always(function () use ($successListener, $failListener, $eventName) {
+                    $this->connection->removeListener('close', $failListener);
+                    $this->connection->removeListener($eventName, $successListener);
+                });
+                $this->connection->on('close', $failListener);
+                $this->connection->on($eventName, $successListener);
             },
             function ($e) use ($deferred) {
                 $deferred->reject($e);
