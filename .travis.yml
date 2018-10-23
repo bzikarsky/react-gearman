@@ -12,7 +12,7 @@ matrix:
 
 before_script:
   - sudo apt-get install -y gearman-job-server
-  - composer install
+  - composer install --ignore-platform-reqs
 
 script:
   - bin/phpunit --coverage-text --verbose
