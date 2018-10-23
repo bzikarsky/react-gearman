@@ -14,6 +14,19 @@ use Zikarsky\React\Gearman\WorkerInterface;
  */
 class SystemTest extends PHPUnit_Framework_TestCase
 {
+    const HOST = '127.0.0.1';
+    const PORT = 4730;
+
+    public function setUp()
+    {
+        $socket = @stream_socket_client("tcp://" . self::HOST . ":" . self::PORT);
+        if ($socket === false) {
+            $this->markTestSkipped("No gearman instance available");
+        } else {
+            fclose($socket);
+        }
+    }
+
     protected function asyncTest(callable $coroutine)
     {
         \Amp\Loop::set((new \Amp\Loop\DriverFactory)->create());
@@ -40,8 +53,8 @@ class SystemTest extends PHPUnit_Framework_TestCase
          * @var ClientInterface $client
          * @var WorkerInterface $worker
          */
-        $client = yield $factory->createClient('127.0.0.1', 4730);
-        $worker = yield $factory->createWorker('127.0.0.1', 4730);
+        $client = yield $factory->createClient(self::HOST, self::PORT);
+        $worker = yield $factory->createWorker(self::HOST, self::PORT);
         return [$client, $worker];
     }
 
