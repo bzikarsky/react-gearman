@@ -76,13 +76,13 @@ class Factory
         return $deferred->promise();
     }
 
-    public function createWorker($host, $port)
+    public function createWorker($host, $port, bool $grabUniques = false)
     {
         $deferred = new Deferred();
         $this->connector->create($host, $port)->then(
-            function ($stream) use ($deferred) {
+            function ($stream) use ($deferred, $grabUniques) {
                 $connection = new Connection($stream, $this->commandFactory);
-                $client = new Worker($connection);
+                $client = new Worker($connection, $grabUniques);
 
                 $client->ping()->then(
                     function () use ($deferred, $client) {
