@@ -11,11 +11,7 @@ class WorkerTest extends PHPUnit_Framework_TestCase
 {
     protected function getConnection()
     {
-        $fac = new CommandFactory();
-        $fac->addType(new CommandType("CAN_DO", 1, ['function_name']));
-        $fac->addType(new CommandType("WORK_COMPLETE", 13, ['job_handle', Command::DATA]));
-        $fac->addType(new CommandType("GRAB_JOB", 9, []));
-        $fac->addType(new CommandType("PRE_SLEEP", 4, []));
+        $fac = new Gearman\Command\Binary\DefaultCommandFactory();
 
         $stream = $this->getMockBuilder(\React\Stream\Stream::class)
             ->setMethods(['write', 'close', 'getBuffer'])
@@ -26,13 +22,13 @@ class WorkerTest extends PHPUnit_Framework_TestCase
         return new Connection($stream, $fac);
     }
 
-    protected function getWorkerMock($mockedMethods = [])
+    protected function getWorkerMock($mockedMethods = [], $uniq = false)
     {
         $connection = $this->getConnection();
         return [
             $this->getMockBuilder(Gearman\Worker::class)
                 ->setMethods($mockedMethods)
-                ->setConstructorArgs([$connection])
+                ->setConstructorArgs([$connection, $uniq])
                 ->getMock(),
             $connection
         ];
@@ -97,6 +93,7 @@ class WorkerTest extends PHPUnit_Framework_TestCase
          */
         $job = null;
         $worker->register('foo', function ($_job) use (&$callbackWasCalled, &$job) {
+            $this->assertEquals(null, $_job->getId());
             $callbackWasCalled = true;
             $job = $_job;
         });
@@ -115,6 +112,56 @@ class WorkerTest extends PHPUnit_Framework_TestCase
         $this->assertEquals(1, $worker->getInflightRequests());
 
         $job->complete("");
+        // Complete decreases inflight requests but grabJob is triggered and this increases them again
+        $this->assertEquals(1, $worker->getInflightRequests());
+    }
+
+    public function testExecuteUniq()
+    {
+        list($worker, $connection) = $this->getWorkerMock(['send'], true);
+
+        /**
+         * @var PHPUnit_Framework_MockObject_MockObject $worker
+         */
+        /*
+         * Called:
+         * - CAN_DO
+         * - GRAB_JOB_UNIQ 2x
+         * - WORK_COMPLETE
+         */
+        $worker->expects($this->exactly(4))->method('send')->will($this->returnValue(\React\Promise\resolve()));
+
+        /**
+         * @var Gearman\Worker $worker
+         */
+        $callbackWasCalled = false;
+        /**
+         * @var Gearman\JobInterface $job
+         */
+        $job = null;
+        $worker->register('foo', function ($_job) use (&$callbackWasCalled, &$job) {
+            $this->assertEquals('deadbeef', $_job->getId());
+
+            $callbackWasCalled = true;
+            $job = $_job;
+        });
+        $type = new CommandType("JOB_ASSIGN_UNIQ", 11, ['job_handle', 'function_name', 'id', Command::DATA]);
+        $data = [
+            'job_handle' => 1,
+            'function_name' => 'foo',
+            'id' => 'deadbeef'
+        ];
+        $command = new Command($type, $data, CommandInterface::MAGIC_REQUEST);
+        /**
+         * @var $connection Gearman\Protocol\Connection
+         */
+        $connection->emit('JOB_ASSIGN_UNIQ', [$command]);
+
+        $this->assertTrue($callbackWasCalled);
+        $this->assertEquals(1, $worker->getInflightRequests());
+
+        $job->complete("");
+
         // Complete decreases inflight requests but grabJob is triggered and this increases them again
         $this->assertEquals(1, $worker->getInflightRequests());
     }

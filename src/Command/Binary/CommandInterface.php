@@ -111,4 +111,12 @@ interface CommandInterface
      * @return string
      */
     public function getMagic();
+
+    /**
+     * Returns whether the job is one of the given command types
+     *
+     * @param string ...$type
+     * @return bool
+     */
+    public function is(string ...$type): bool;
 }

@@ -46,9 +46,16 @@ class Worker extends Participant implements WorkerInterface
      */
     protected $runningJobs = [];
 
-    public function __construct(Connection $connection)
+    /**
+     * @var bool
+     */
+    protected $grabUniques = false;
+
+    public function __construct(Connection $connection, bool $grabUniques = false)
     {
         parent::__construct($connection);
+
+        $this->grabUniques = $grabUniques;
 
         // set up wake-up by NOOP
         $this->getConnection()->on('NOOP', [$this, 'grabJob']);
@@ -57,6 +64,7 @@ class Worker extends Participant implements WorkerInterface
         // responses to a grabJob
         $this->getConnection()->on('NO_JOB', [$this, 'handleNoJob']);
         $this->getConnection()->on('JOB_ASSIGN', [$this, 'handleJob']);
+        $this->getConnection()->on('JOB_ASSIGN_UNIQ', [$this, 'handleUniqueJob']);
 
         $this->on('close', function () {
             $this->finishShutdown();
@@ -242,7 +250,9 @@ class Worker extends Participant implements WorkerInterface
 
     protected function grabJobSend()
     {
-        $grab = $this->getCommandFactory()->create('GRAB_JOB');
+        $type = $this->grabUniques ? 'GRAB_JOB_UNIQ' : 'GRAB_JOB';
+
+        $grab = $this->getCommandFactory()->create($type);
         $this->send($grab);
         $this->grabsInFlight++;
     }
@@ -280,9 +290,9 @@ class Worker extends Participant implements WorkerInterface
         }
     }
 
-    protected function handleJob(CommandInterface $command)
+    protected function makeJobSender()
     {
-        $job = Job::FromCommand($command, function ($command, array $payload) {
+        return function ($command, array $payload) {
             $promise = $this->send($this->getCommandFactory()->create($command, $payload));
             // Intercept commands that finish a job
             if (in_array($command, ['WORK_COMPLETE', 'WORK_FAIL', 'WORK_EXCEPTION'])) {
@@ -299,8 +309,21 @@ class Worker extends Participant implements WorkerInterface
                 });
             }
             return $promise;
-        });
+        };
+    }
 
+    protected function handleJob(CommandInterface $command)
+    {
+        $this->processJob(Job::fromCommand($command, $this->makeJobSender()));
+    }
+
+    protected function handleUniqueJob(CommandInterface $command)
+    {
+        $this->processJob(Job::uniqueFromCommand($command, $this->makeJobSender()));
+    }
+
+    protected function processJob(JobInterface $job)
+    {
         if (!isset($this->functions[$job->getFunction()])) {
             throw new \LogicException("Got job for unknown function {$job->getFunction()}");
         }

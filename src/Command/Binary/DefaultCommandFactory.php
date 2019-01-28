@@ -33,8 +33,8 @@ class DefaultCommandFactory extends CommandFactory
         $this->addType(new CommandType("OPTION_RES",            27,  ['option_name']));
         $this->addType(new CommandType("WORK_DATA",             28,  ['job_handle', Command::DATA]));
         $this->addType(new CommandType("WORK_WARNING",          29,  ['job_handle', Command::DATA]));
-        $this->addType(new CommandType("GRAB_JOB_UNIQUE",       30,  []));
-        $this->addType(new CommandType("JOB_ASSIGN_UNIQUE",     31,  ['job_handle', 'function_name', 'id', Command::DATA]));
+        $this->addType(new CommandType("GRAB_JOB_UNIQ",         30,  []));
+        $this->addType(new CommandType("JOB_ASSIGN_UNIQ",       31,  ['job_handle', 'function_name', 'id', Command::DATA]));
         $this->addType(new CommandType("SUBMIT_JOB_HIGH_BG",    32,  ['function_name', 'id', Command::DATA]));
         $this->addType(new CommandType("SUBMIT_JOB_LOW",        33,  ['function_name', 'id', Command::DATA]));
         $this->addType(new CommandType("SUBMIT_JOB_LOW_BG",     34,  ['function_name', 'id', Command::DATA]));

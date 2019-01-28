@@ -80,4 +80,6 @@ interface JobInterface
      * @return mixed
      */
     public function fail($error = null);
+
+    public function getId();
 }

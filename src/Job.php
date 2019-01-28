@@ -11,19 +11,21 @@ class Job extends EventEmitter implements JobInterface
     protected $function;
     protected $handle;
     protected $workload;
+    protected $id;
     protected $status = self::STATUS_RUNNING;
 
-    public function __construct(callable $sender, $function, $handle, $workload)
+    public function __construct(callable $sender, $function, $handle, $workload, $id = null)
     {
         $this->send = $sender;
         $this->function = $function;
         $this->handle = $handle;
         $this->workload = $workload;
+        $this->id = $id;
     }
 
     public static function fromCommand(CommandInterface $command, callable $sender)
     {
-        if ($command->getName() != 'JOB_ASSIGN') {
+        if (!$command->is('JOB_ASSIGN')) {
             throw new \RuntimeException('Can only create a Job from a JOB_ASSIGN command');
         }
 
@@ -31,7 +33,23 @@ class Job extends EventEmitter implements JobInterface
             $sender,
             $command->get('function_name'),
             $command->get('job_handle'),
-            $command->get(CommandInterface::DATA)
+            $command->get(CommandInterface::DATA),
+            null
+        );
+    }
+
+    public static function uniqueFromCommand(CommandInterface $command, callable $sender)
+    {
+        if (!$command->is('JOB_ASSIGN_UNIQ')) {
+            throw new \RuntimeException('Can only create a unique Job from a JOB_ASSIGN_UNIQ command');
+        }
+
+        return new self(
+            $sender,
+            $command->get('function_name'),
+            $command->get('job_handle'),
+            $command->get(CommandInterface::DATA),
+            $command->get('id')
         );
     }
 
@@ -48,6 +66,11 @@ class Job extends EventEmitter implements JobInterface
     public function getWorkload()
     {
         return $this->workload;
+    }
+
+    public function getId()
+    {
+        return $this->id;
     }
 
     public function sendStatus($numerator, $denominator)

@@ -84,4 +84,9 @@ class Command implements CommandInterface
     {
         return $this->magic;
     }
+
+    public function is(string ...$types): bool
+    {
+        return in_array($this->getName(), $types);
+    }
 }
