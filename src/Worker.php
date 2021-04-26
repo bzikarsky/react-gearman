@@ -285,9 +285,6 @@ class Worker extends Participant implements WorkerInterface
     protected function onJobDone($handle)
     {
         unset($this->runningJobs[$handle]);
-        if (count($this->runningJobs) == 0 && $this->shutdownPromise !== null) {
-            $this->initShutdown();
-        }
     }
 
     protected function makeJobSender()
@@ -302,11 +299,7 @@ class Worker extends Participant implements WorkerInterface
                 $this->grabJob();
 
                 // Mark job as done only if status has been sent successfully
-                $promise->then(function () use ($handle) {
-                    $this->onJobDone($handle);
-                }, function () use ($handle) {
-                    $this->onJobDone($handle);
-                });
+                $promise->always(fn () => $this->onJobDone($handle));
             }
             return $promise;
         };

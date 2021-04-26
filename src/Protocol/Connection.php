@@ -3,7 +3,10 @@
 namespace Zikarsky\React\Gearman\Protocol;
 
 use Evenement\EventEmitter;
+use React\Promise\Promise;
+use React\Promise\PromiseInterface;
 use React\Promise\RejectedPromise;
+use React\Stream\DuplexStreamInterface;
 use Zikarsky\React\Gearman\Command\Binary\CommandFactoryInterface;
 use Zikarsky\React\Gearman\Command\Binary\CommandInterface;
 use Zikarsky\React\Gearman\Command\Binary\ReadBuffer;
@@ -15,6 +18,7 @@ use React\Stream\Stream;
 use React\Promise\Deferred;
 use BadMethodCallException;
 use Zikarsky\React\Gearman\ConnectionLostException;
+use function React\Promise\reject;
 
 /**
  * The connection wraps around the non-async version of the protocol buffers
@@ -67,10 +71,10 @@ class Connection extends EventEmitter
      * Creates the connection on top of the async stream and with the given
      * command-factory/specification
      *
-     * @param Stream $stream
+     * @param DuplexStreamInterface $stream
      * @param CommandFactoryInterface $commandFactory
      */
-    public function __construct(Stream $stream, CommandFactoryInterface $commandFactory)
+    public function __construct(DuplexStreamInterface $stream, CommandFactoryInterface $commandFactory)
     {
         $this->commandFactory = $commandFactory;
         $this->writeBuffer = new WriteBuffer();
@@ -89,12 +93,7 @@ class Connection extends EventEmitter
             $this->closed = true;
             $this->emit('close', [$this]);
         });
-        $this->stream->getBuffer()->on('full-drain', function () {
-            foreach ($this->commandSendQueue as $deferred) {
-                $deferred->resolve();
-            }
-            $this->commandSendQueue = [];
-        });
+
         $this->on('close', function () {
             foreach ($this->commandSendQueue as $deferred) {
                 $deferred->reject(new ConnectionLostException());
@@ -123,10 +122,8 @@ class Connection extends EventEmitter
 
     /**
      * Handles incoming data (in byte form) and emits commands when fully read
-     *
-     * @param string $data
      */
-    protected function handleData($data)
+    protected function handleData(string $data): void
     {
         $this->readBuffer->push($data);
 
@@ -147,42 +144,31 @@ class Connection extends EventEmitter
 
     /**
      * Sends a command over the stream
-     *
-     * @param  CommandInterface $command
      * @throws BadMethodCallException when the connection is closed
-     * @return \React\Promise\Promise|\React\Promise\PromiseInterface
      */
-    public function send(CommandInterface $command)
+    public function send(CommandInterface $command): void
     {
         if ($this->isClosed()) {
-            return new RejectedPromise(new BadMethodCallException("Connection is closed. Cannot send commands anymore"));
+            throw new BadMethodCallException("Connection is closed. Cannot send commands anymore");
         }
 
-        $deferred = new Deferred();
         $this->logger->info("> $command");
         $this->writeBuffer->push($command);
         $this->stream->write($this->writeBuffer->shift());
-        $this->commandSendQueue[] = $deferred;
-
-        return $deferred->promise();
     }
 
     /**
      * Returns the command factory
-     *
-     * @return CommandFactoryInterface
      */
-    public function getCommandFactory()
+    public function getCommandFactory(): CommandFactoryInterface
     {
         return $this->commandFactory;
     }
 
     /**
      * Returns the closed status of the connection
-     *
-     * @return boolean
      */
-    public function isClosed()
+    public function isClosed(): bool
     {
         return $this->closed;
     }
@@ -190,7 +176,7 @@ class Connection extends EventEmitter
     /**
      * Closes the connection
      */
-    public function close()
+    public function close(): void
     {
         if (!$this->isClosed()) {
             $this->stream->close();

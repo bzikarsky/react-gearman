@@ -2,9 +2,11 @@
 
 namespace Zikarsky\React\Gearman;
 
-use React\Socket\ConnectorInterface;
-use React\SocketClient\DnsConnector;
-use React\SocketClient\TcpConnector;
+use Psr\Log\AbstractLogger;
+use Psr\Log\Test\TestLogger;
+use React\Socket\DnsConnector;
+use React\Socket\TcpConnector;
+use Symfony\Component\Console\Logger\ConsoleLogger;
 use Zikarsky\React\Gearman\Protocol\Connection;
 use Zikarsky\React\Gearman\Command\Binary\CommandFactoryInterface;
 use React\Dns\Resolver\Resolver;
@@ -54,9 +56,15 @@ class Factory
     public function createClient($host, $port)
     {
         $deferred = new Deferred();
-        $this->connector->create($host, $port)->then(
+        $this->connector->connect($host . ':' . $port)->then(
             function ($stream) use ($deferred) {
                 $connection = new Connection($stream, $this->commandFactory);
+//                $connection->setLogger(new class extends AbstractLogger {
+//                    public function log($level, $message, array $context = array())
+//                    {
+//                        echo "[CLIENT][$level] $message}\n";
+//                    }
+//                });
                 $client = new Client($connection);
 
                 $client->ping()->then(
@@ -79,9 +87,15 @@ class Factory
     public function createWorker($host, $port, bool $grabUniques = false)
     {
         $deferred = new Deferred();
-        $this->connector->create($host, $port)->then(
+        $this->connector->connect($host . ':' . $port)->then(
             function ($stream) use ($deferred, $grabUniques) {
                 $connection = new Connection($stream, $this->commandFactory);
+//                $connection->setLogger(new class extends AbstractLogger {
+//                    public function log($level, $message, array $context = array())
+//                    {
+//                        echo "[WORKER][$level] $message}\n";
+//                    }
+//                });
                 $client = new Worker($connection, $grabUniques);
 
                 $client->ping()->then(

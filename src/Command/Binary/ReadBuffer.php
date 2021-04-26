@@ -14,74 +14,26 @@ use Zikarsky\React\Gearman\Command\Exception as ProtocolException;
  */
 class ReadBuffer implements Countable
 {
-    /**
-     * @var string
-     */
-    protected $buffer;
+    /** @var CommandInterface[] */
+    private array $commandBuffer = [];
+    private string $buffer = "";
+    private ?CommandInterface $currentCommand = null;
+    private int $requiredBytes = CommandInterface::HEADER_LENGTH;
+    private CommandFactoryInterface $commandFactory;
 
-    /**
-     * @var CommandInterface[]
-     */
-    protected $commandBuffer;
-
-    /**
-     * @var CommandInterface|null
-     */
-    protected $currentCommand;
-
-    /**
-     * @var integer
-     */
-    protected $requiredBytes;
-
-    /**
-     * @var CommandFactoryInterface
-     */
-    protected $commandFactory = null;
-
-    /**
-     * Creates the protocol buffer
-     *
-     * @param CommandFactoryInterface $commandFactory
-     */
     public function __construct(CommandFactoryInterface $commandFactory)
     {
         $this->commandFactory = $commandFactory;
-        $this->init();
-    }
-
-    /**
-     * Init protocol buffer
-     */
-    protected function init()
-    {
-        // byte buffer is empty
-        $this->buffer = "";
-
-        // no commands have been read yet
-        $this->commandBuffer = [];
-
-        // there is no command currently being read
-        $this->currentCommand = null;
-
-        // we expect to read a command header next
-        $this->requiredBytes = CommandInterface::HEADER_LENGTH;
     }
 
     /**
      * Push bytes into the buffer, returns whether full commands were read
      *
-     * @param  string                   $bytes
-     * @return bool
      * @throws InvalidArgumentException
      * @throws ProtocolException
      */
-    public function push($bytes)
+    public function push(string $bytes): bool
     {
-        if (!is_string($bytes)) {
-            throw new InvalidArgumentException("Only a raw byte string can be pushed into the buffer");
-        }
-
         $this->buffer .= $bytes;
 
         // if our buffer matches or exceeds the current required byte count
@@ -102,7 +54,7 @@ class ReadBuffer implements Countable
      * @return CommandInterface
      * @throws OutOfBoundsException
      */
-    public function shift()
+    public function shift(): CommandInterface
     {
         if (!count($this->commandBuffer)) {
             throw new OutOfBoundsException("Command buffer is empty");
@@ -114,17 +66,14 @@ class ReadBuffer implements Countable
     /**
      * Handles given buffer with respect to current buffer state
      *
-     * @param $buffer
      * @throws InvalidArgumentException
      * @throws ProtocolException
      */
-    protected function handleBuffer($buffer)
+    private function handleBuffer(string $buffer): void
     {
-        $len = strlen($buffer);
-
         // @codeCoverageIgnoreStart
         // This is an internal safeguard which is not testable
-        if ($len != $this->requiredBytes) {
+        if (strlen($buffer) !== $this->requiredBytes) {
             throw new InvalidArgumentException("Expected a string with length of $this->requiredBytes. Got $len bytes");
         }
         // @codeCoverageIgnoreEnd
@@ -138,13 +87,11 @@ class ReadBuffer implements Countable
 
     /**
      * Handles a package header
-     *
-     * @param string $buffer
      */
-    protected function handleHeader($buffer)
+    private function handleHeader(string $buffer): void
     {
         $result = unpack(CommandInterface::HEADER_READ_FORMAT, $buffer);
-        list($magic, $type, $size) = array_values($result);
+        [$magic, $type, $size] = array_values($result);
 
         // set state: set command being read and its body size as required buffer-length to proceed
         $this->currentCommand = $this->commandFactory->create($type, [], $magic);
@@ -153,18 +100,16 @@ class ReadBuffer implements Countable
 
     /**
      * Handles a package body
-     *
-     * @param  string            $buffer
      * @throws ProtocolException
      */
-    protected function handleBody($buffer)
+    private function handleBody(string $buffer): void
     {
         // split buffer into arguments
         $args = array_keys($this->currentCommand->getAll());
-        $argv = strlen($buffer) ? explode(CommandInterface::ARGUMENT_DELIMITER, $buffer, count($args)) : [];
+        $argv = $buffer !== '' ? explode(CommandInterface::ARGUMENT_DELIMITER, $buffer, count($args)) : [];
 
         // validate argument-count vs expected argument count
-        if (count($args) != count($argv)) {
+        if (count($args) !== count($argv)) {
             throw new ProtocolException("Invalid package-header: header.size bytes did not contain full package body");
         }
 
@@ -174,17 +119,15 @@ class ReadBuffer implements Countable
         }
 
         // set set state: put complete command into buffer, and expect a header next
-        array_push($this->commandBuffer, $this->currentCommand);
+        $this->commandBuffer[]  = $this->currentCommand;
         $this->currentCommand   = null;
         $this->requiredBytes    = CommandInterface::HEADER_LENGTH;
     }
 
     /**
      * Return count of parsed and waiting commands
-     *
-     * @return integer
      */
-    public function count()
+    public function count(): int
     {
         return count($this->commandBuffer);
     }

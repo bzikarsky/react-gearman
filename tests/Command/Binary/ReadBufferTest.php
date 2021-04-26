@@ -42,12 +42,6 @@ class ReadBufferTest extends \PHPUnit\Framework\TestCase
         $this->resPacket = new Command($this->typeB, ["a" => "foo", "b" => "bar"], CommandInterface::MAGIC_RESPONSE);
     }
 
-    public function testPushInvalidData()
-    {
-        $this->expectException(InvalidArgumentException::class);
-        $this->buf->push(1);
-    }
-
     public function testShiftOnEmptyBuffer()
     {
         $this->expectException(OutOfBoundsException::class);

@@ -6,3 +6,4 @@ composer.lock
 # PHP CS Fixer local files
 .php_cs
 .php_cs.cache
+/.phpunit.result.cache

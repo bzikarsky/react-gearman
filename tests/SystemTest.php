@@ -28,14 +28,8 @@ class SystemTest extends \PHPUnit\Framework\TestCase
 
     protected function asyncTest(callable $coroutine)
     {
-        \Amp\Loop::set((new \Amp\Loop\DriverFactory)->create());
         gc_collect_cycles(); // extensions using an event loop may otherwise leak the file descriptors to the loop
-        $result = \Amp\Promise\wait(\Amp\call($coroutine));
-        $info = \Amp\Loop::get()->getInfo();
-        if ($info['enabled_watchers']['referenced'] > 0) {
-            $this->fail("Loop has referenced watchers: " . json_encode($info));
-        }
-        return $result;
+        \Amp\Loop::run($coroutine);
     }
 
     protected function getFactory()
@@ -61,7 +55,7 @@ class SystemTest extends \PHPUnit\Framework\TestCase
     {
         $deferred = new \Amp\Deferred();
 
-        $watcher = \Amp\Loop::delay(100, function () use ($deferred, $task) {
+        $watcher = \Amp\Loop::delay(10000, function () use ($deferred, $task) {
             $deferred->fail(new Exception("Job timed out: {$task->getWorkload()}"));
         });
 
@@ -149,8 +143,8 @@ class SystemTest extends \PHPUnit\Framework\TestCase
             // Register worker after submitting tasks. Otherwise task resolutions could be missed.
             // @todo Fix race condition, task should always be resolved
             yield $worker->register($queueName, function (JobInterface $job) use (&$workerCalled) {
-                $job->complete($job->getWorkload());
                 $workerCalled = true;
+                $job->complete($job->getWorkload());
             });
 
             foreach ($tasks as $i => $task) {

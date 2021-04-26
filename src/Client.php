@@ -348,14 +348,14 @@ class Client extends Participant implements ClientInterface
         }
     }
 
-    protected function blockingActionStart()
+    protected function blockingActionStart(): void
     {
         parent::blockingActionStart();
         $this->pendingActions++;
         $this->getConnection()->resume();
     }
 
-    protected function blockingActionEnd()
+    protected function blockingActionEnd(): void
     {
         parent::blockingActionEnd();
         $this->pendingActions--;

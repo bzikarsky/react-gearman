@@ -3,12 +3,16 @@
 namespace Zikarsky\React\Gearman\Protocol;
 
 use Evenement\EventEmitter;
+use Exception;
+use React\Promise\FulfilledPromise;
+use React\Promise\PromiseInterface;
 use Zikarsky\React\Gearman\Command\Binary\CommandInterface;
 use Zikarsky\React\Gearman\Command\Binary\CommandFactoryInterface;
 use Zikarsky\React\Gearman\Command\Exception as ProtocolException;
 use React\Promise\Promise;
 use React\Promise\Deferred;
 use Zikarsky\React\Gearman\ConnectionLostException;
+use function React\Promise\resolve;
 
 /**
  * A participant is a async participant in the Gearman protocol, such as Clients, Workers and Servers
@@ -30,20 +34,16 @@ abstract class Participant extends EventEmitter
      *
      * @var array
      */
-    protected $sendQueue = [];
+    protected array $sendQueue = [];
 
     /**
      * If send is currently locked
-     *
-     * @var bool
      */
-    protected $sendLocked = false;
+    private bool $sendIsLocked = false;
 
     /**
      * Creates an Participant and registers handlers for packets not handled by the actual particpant and
      * ERROR packets
-     *
-     * @param Connection $connection
      */
     public function __construct(Connection $connection)
     {
@@ -69,11 +69,11 @@ abstract class Participant extends EventEmitter
     public function ping()
     {
         $command = $this->getCommandFactory()->create("ECHO_REQ", [
-            CommandInterface::DATA => uniqid()
+            CommandInterface::DATA => uniqid('', true)
         ]);
 
         return $this->blockingAction($command, 'ECHO_RES', function (CommandInterface $ping, CommandInterface $pong) {
-            $success = $ping->get(CommandInterface::DATA) == $pong->get(CommandInterface::DATA);
+            $success = $ping->get(CommandInterface::DATA) === $pong->get(CommandInterface::DATA);
             if (!$success) {
                 throw new ProtocolException("Ping response did not match ping request");
             }
@@ -84,11 +84,11 @@ abstract class Participant extends EventEmitter
         });
     }
 
-    protected function blockingActionStart()
+    protected function blockingActionStart(): void
     {
     }
 
-    protected function blockingActionEnd()
+    protected function blockingActionEnd(): void
     {
     }
 
@@ -103,45 +103,42 @@ abstract class Participant extends EventEmitter
      * @param  callable $handler
      * @return Promise
      */
-    protected function blockingAction(CommandInterface $command, $eventName, callable $handler)
+    protected function blockingAction(CommandInterface $command, string $eventName, callable $handler)
     {
         // create the deferred action to execute $handler on $eventName after sending $command
         $deferred = new Deferred();
-        $actionPromise = $deferred->promise();
         $this->blockingActionStart();
 
-        // send command
-        $this->send($command, $actionPromise)->then(
-        // as soon as the command is sent, register a one-time event-handler
-        // on the expected response event, which executes the handler
-            function (CommandInterface $sentCommand) use ($deferred, $eventName, $handler) {
-                $successListener = null;
-                $failListener = function () use ($deferred, $eventName, &$successListener) {
-                    $deferred->reject(new ConnectionLostException());
-                };
-                $successListener = function (CommandInterface $recvCommand) use ($sentCommand, $deferred, $handler) {
-                    // if the result is not NULL resolve the deferred action with the handler's result
-                    // if the result is NULL we assume the handler communicated the result on the passed in deferred
-                    // itself
-                    $result = $handler($sentCommand, $recvCommand, $deferred);
-                    if ($result !== null) {
-                        $this->blockingActionEnd();
-                        $deferred->resolve($result);
-                    }
-                };
-                $deferred->promise()->always(function () use ($successListener, $failListener, $eventName) {
-                    $this->connection->removeListener('close', $failListener);
-                    $this->connection->removeListener($eventName, $successListener);
-                });
-                $this->connection->on('close', $failListener);
-                $this->connection->on($eventName, $successListener);
-            },
-            function ($e) use ($deferred) {
-                $deferred->reject($e);
-            }
-        );
+        $failListener = function () use ($deferred, $eventName, &$successListener) {
+            $deferred->reject(new ConnectionLostException());
+        };
 
-        return $actionPromise;
+        $successListener = function (CommandInterface $recvCommand) use ($command, $deferred, $handler) {
+            // if the result is not NULL resolve the deferred action with the handler's result
+            // if the result is NULL we assume the handler communicated the result on the passed in deferred
+            // itself
+            $result = $handler($command, $recvCommand, $deferred);
+            if ($result !== null) {
+                $this->blockingActionEnd();
+                $deferred->resolve($result);
+            }
+        };
+
+        $deferred->promise()->always(function () use ($eventName, $successListener, $failListener) {
+            $this->connection->removeListener($eventName, $successListener);
+            $this->connection->removeListener('close', $failListener);
+        });
+
+        // send command
+        $promise = $deferred->promise();
+        $this->send($command, $promise)->then(
+            function () use ($eventName, $successListener, $failListener) {
+                $this->connection->once($eventName, $successListener);
+                $this->connection->once('close', $failListener);
+            },
+            fn ($e) => $deferred->reject($e)
+        );
+        return $deferred->promise();
     }
 
     /**
@@ -152,60 +149,63 @@ abstract class Participant extends EventEmitter
      *
      * @param  CommandInterface $command
      * @param  Promise $lock
-     * @return Promise
      */
-    protected function send(CommandInterface $command, Promise $lock = null)
+    protected function send(CommandInterface $command, ?Promise $lock = null): PromiseInterface
     {
-        // the deferred action to send the data
-        $deferred = new Deferred();
-
         // request deferred sending
-        $this->sendDeferred($command, $deferred, $lock);
-
-        // return the promise to send
-        return $deferred->promise();
+        return $this->sendDeferred($command, $lock);
     }
 
     /**
      * INTERNAL ONLY: Sends the command and resolves the the passed in deferred as soon
      * the command is really sent.
      * Other commands are queued until an optional promise resolves (unlocks)
-     *
-     * @param CommandInterface $command
-     * @param Deferred $deferred
-     * @param Promise $lock
      */
-    private function sendDeferred(CommandInterface $command, Deferred $deferred, Promise $lock = null)
+    private function sendDeferred(CommandInterface $command, ?Promise $lockedUntil = null): PromiseInterface
     {
-        if ($this->sendLocked === true) {
-            $this->sendQueue[] = [$command, $deferred, $lock];
-            return;
+        // If sending is not locked and we do not have to unlock, just send
+        if ($this->sendIsLocked === false && $lockedUntil === null) {
+            $this->connection->send($command);
+            return resolve();
+        }
+
+        // We are locked: Enqueue send and return promise
+        if ($this->sendIsLocked === true) {
+            $deferred = new Deferred();
+            $this->sendQueue[] = [$command, $lockedUntil, $deferred];
+            return $deferred->promise();
         }
 
         // if this operation is blocking:
-        //  - install the given promise as lock
+        //  - lock down sending
         //  - install a resolve-handler which removes the lock
         //  - install an error-handler to communicate the failure
-        if ($lock) {
-            $this->sendLocked = true;
-            $doUnlock = function () {
-                $this->sendLocked = false;
-                if (!empty($this->sendQueue)) {
-                    list($command, $deferred, $lock) = array_shift($this->sendQueue);
-                    $this->sendDeferred($command, $deferred, $lock);
-                }
-            };
-            // Also unlock if previous command failed, otherwise there is a deadlock when issueing a blocked command after a failure
-            $lock->then($doUnlock, $doUnlock);
-        }
+        $this->sendIsLocked = true;
 
-        // write the command
-        $this->connection->send($command)->then(function () use ($deferred, $command) {
-            // resolve the the promise to send the data
-            $deferred->resolve($command);
-        }, function ($e) use ($deferred) {
-            $deferred->reject($e);
-        });
+
+        // Define unlock-handler which resumes sending
+        $onUnlock = function () {
+            $this->sendIsLocked = false;
+
+            if (empty($this->sendQueue)) {
+                return;
+            }
+
+            $oldQueue = $this->sendQueue;
+            $this->sendQueue= [];
+            foreach ($oldQueue as [$command, $lock, $deferred]) {
+                $this->sendDeferred($command, $lock)
+                    ->then(fn () => $deferred->resolve())
+                    ->otherwise(fn ($e) => $deferred->reject($e))
+                ;
+            }
+        };
+
+        // Also unlock if previous command failed, otherwise there is a deadlock when issueing a blocked command after a failure
+        $lockedUntil->then($onUnlock, $onUnlock);
+
+        $this->connection->send($command);
+        return resolve();
     }
 
     /**

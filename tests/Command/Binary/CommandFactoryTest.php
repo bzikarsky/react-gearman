@@ -1,29 +1,18 @@
 <?php
 
-use Zikarsky\React\Gearman\Command\Binary\CommandFactory;
+use Zikarsky\React\Gearman\Command\Binary\CommandFactory as CommandFactoryAlias;
 use Zikarsky\React\Gearman\Command\Binary\CommandInterface;
 use Zikarsky\React\Gearman\Command\Binary\CommandType;
 
 class CommandFactoryTest extends \PHPUnit\Framework\TestCase
 {
+    protected CommandFactoryAlias $factory;
+    protected CommandType $typeA;
+    protected CommandType $typeB;
 
-    /**
-     * @var CommandFactory
-     */
-    protected $factory;
-
-    /**
-     * @var CommandType
-     */
-    protected $typeA;
-
-    /**
-     * @var CommandType
-     */
-    protected $typeB;
-
-    public function setUp(): void    {
-        $this->factory = new CommandFactory();
+    public function setUp(): void
+    {
+        $this->factory = new CommandFactoryAlias();
 
         // todo: Replace by mocks when CommandType is non-trivial
         $this->typeA = new CommandType("test-a", 1, []);
@@ -43,7 +32,7 @@ class CommandFactoryTest extends \PHPUnit\Framework\TestCase
     /**
      * @depends testAddType
      */
-    public function testGetTypeByCode(CommandFactory $factory)
+    public function testGetTypeByCode(CommandFactoryAlias $factory)
     {
         $this->assertEquals($this->typeA, $factory->getTypeByCode(1));
         $this->assertEquals($this->typeB, $factory->getTypeByCode(2));
@@ -53,7 +42,7 @@ class CommandFactoryTest extends \PHPUnit\Framework\TestCase
      * @depends testAddType
      *
      */
-    public function testGetTypeByCodeInvalid(CommandFactory $factory)
+    public function testGetTypeByCodeInvalid(CommandFactoryAlias $factory)
     {
         $this->expectException(InvalidArgumentException::class);
         $factory->getTypeByCode(3);
@@ -62,7 +51,7 @@ class CommandFactoryTest extends \PHPUnit\Framework\TestCase
     /**
      * @depends testAddType
      */
-    public function testGetTypeByName(CommandFactory $factory)
+    public function testGetTypeByName(CommandFactoryAlias $factory)
     {
         $this->assertEquals($this->typeA, $factory->getTypeByName("test-a"));
         $this->assertEquals($this->typeB, $factory->getTypeByName("test-b"));
@@ -72,7 +61,7 @@ class CommandFactoryTest extends \PHPUnit\Framework\TestCase
      * @depends testAddType
      *
      */
-    public function testGetTypeByNameInvalid(CommandFactory $factory)
+    public function testGetTypeByNameInvalid(CommandFactoryAlias $factory)
     {
         $this->expectException(InvalidArgumentException::class);
         $factory->getTypeByName("test-c");
@@ -81,7 +70,7 @@ class CommandFactoryTest extends \PHPUnit\Framework\TestCase
     /**
      * @depends testAddType
      */
-    public function testGetType(CommandFactory $factory)
+    public function testGetType(CommandFactoryAlias $factory)
     {
         $this->assertEquals($this->typeA, $factory->getType("test-a"));
         $this->assertEquals($this->typeB, $factory->getType("test-b"));
@@ -93,7 +82,7 @@ class CommandFactoryTest extends \PHPUnit\Framework\TestCase
     /**
      * @depends testAddType
      */
-    public function testCreate(CommandFactory $factory)
+    public function testCreate(CommandFactoryAlias $factory)
     {
         $command = $factory->create(1, [], CommandInterface::MAGIC_REQUEST);
         $this->assertInstanceOf('\Zikarsky\React\Gearman\Command\Binary\CommandInterface', $command);
