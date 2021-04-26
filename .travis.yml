@@ -2,11 +2,8 @@ language: php
 php:
   - 7.2
   - 7.3
-  - nightly
-
-matrix:
-  allow_failures:
-    - php: nightly
+  - 7.4
+  - 8.0
 
 before_script:
   - sudo apt-get install -y gearman-job-server
