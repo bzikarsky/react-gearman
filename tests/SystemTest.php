@@ -12,13 +12,12 @@ use Zikarsky\React\Gearman\WorkerInterface;
  * Class SystemTest
  * @group system
  */
-class SystemTest extends PHPUnit_Framework_TestCase
+class SystemTest extends \PHPUnit\Framework\TestCase
 {
     const HOST = '127.0.0.1';
     const PORT = 4730;
 
-    public function setUp()
-    {
+    public function setUp(): void    {
         $socket = @stream_socket_client("tcp://" . self::HOST . ":" . self::PORT);
         if ($socket === false) {
             $this->markTestSkipped("No gearman instance available");

@@ -6,7 +6,7 @@ use Zikarsky\React\Gearman\Command\Binary\CommandInterface;
 use Zikarsky\React\Gearman\Command\Binary\CommandFactory;
 use Zikarsky\React\Gearman\Protocol\Connection;
 
-class ConnectionTest extends PHPUnit_Framework_TestCase
+class ConnectionTest extends \PHPUnit\Framework\TestCase
 {
     protected $type;
     protected $packet;
@@ -15,8 +15,7 @@ class ConnectionTest extends PHPUnit_Framework_TestCase
     protected $stream;
     protected $connection;
 
-    public function setUp()
-    {
+    public function setUp(): void    {
         $this->setUpStream();
     }
 
@@ -41,11 +40,9 @@ class ConnectionTest extends PHPUnit_Framework_TestCase
         $this->packetStr = $buf->shift(null);
     }
 
-    /**
-     * @expectedException \Zikarsky\React\Gearman\Command\Exception
-     */
     public function testStreamError()
     {
+        $this->expectException(\Zikarsky\React\Gearman\Command\Exception::class);
         $this->stream->emit("error", ["test-error"]);
     }
 

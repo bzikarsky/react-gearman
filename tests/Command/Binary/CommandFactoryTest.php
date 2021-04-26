@@ -4,7 +4,7 @@ use Zikarsky\React\Gearman\Command\Binary\CommandFactory;
 use Zikarsky\React\Gearman\Command\Binary\CommandInterface;
 use Zikarsky\React\Gearman\Command\Binary\CommandType;
 
-class CommandFactoryTest extends PHPUnit_Framework_TestCase
+class CommandFactoryTest extends \PHPUnit\Framework\TestCase
 {
 
     /**
@@ -22,8 +22,7 @@ class CommandFactoryTest extends PHPUnit_Framework_TestCase
      */
     protected $typeB;
 
-    public function setUp()
-    {
+    public function setUp(): void    {
         $this->factory = new CommandFactory();
 
         // todo: Replace by mocks when CommandType is non-trivial
@@ -33,6 +32,8 @@ class CommandFactoryTest extends PHPUnit_Framework_TestCase
 
     public function testAddType()
     {
+        $this->expectNotToPerformAssertions();
+
         $this->factory->addType($this->typeA);
         $this->factory->addType($this->typeB);
 
@@ -50,10 +51,11 @@ class CommandFactoryTest extends PHPUnit_Framework_TestCase
 
     /**
      * @depends testAddType
-     * @expectedException InvalidArgumentException
+     *
      */
     public function testGetTypeByCodeInvalid(CommandFactory $factory)
     {
+        $this->expectException(InvalidArgumentException::class);
         $factory->getTypeByCode(3);
     }
 
@@ -68,10 +70,11 @@ class CommandFactoryTest extends PHPUnit_Framework_TestCase
 
     /**
      * @depends testAddType
-     * @expectedException InvalidArgumentException
+     *
      */
     public function testGetTypeByNameInvalid(CommandFactory $factory)
     {
+        $this->expectException(InvalidArgumentException::class);
         $factory->getTypeByName("test-c");
     }
 
@@ -109,19 +112,21 @@ class CommandFactoryTest extends PHPUnit_Framework_TestCase
 
     /**
      * @depends testAddType
-     * @expectedException InvalidArgumentException
+     *
      */
     public function testCreateInvalidType($factory)
     {
+        $this->expectException(InvalidArgumentException::class);
         $factory->create(3, [], CommandInterface::MAGIC_REQUEST);
     }
 
     /**
      * @depends testAddType
-     * @expectedException InvalidArgumentException
+     *
      */
     public function testCreateInvalidData($factory)
     {
+        $this->expectException(InvalidArgumentException::class);
         $factory->create(1, ["test" => "b"], CommandInterface::MAGIC_REQUEST);
     }
 }

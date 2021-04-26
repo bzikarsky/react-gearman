@@ -6,7 +6,7 @@ use Zikarsky\React\Gearman\Command\Binary\CommandType;
 use Zikarsky\React\Gearman\Command\Binary\CommandInterface;
 use Zikarsky\React\Gearman\Command\Binary\WriteBuffer;
 
-class WriteBufferTest extends PHPUnit_Framework_TestCase
+class WriteBufferTest extends \PHPUnit\Framework\TestCase
 {
 
     /**
@@ -26,8 +26,7 @@ class WriteBufferTest extends PHPUnit_Framework_TestCase
     protected $reqPacket;
     protected $resPacket;
 
-    public function setUp()
-    {
+    public function setUp(): void    {
         $this->fac = new CommandFactory();
 
         $this->typeA = new CommandType("TEST_A", 1, []);
@@ -67,11 +66,9 @@ class WriteBufferTest extends PHPUnit_Framework_TestCase
         $this->assertEquals(substr($this->reqPacketStr, 1), $this->buf->shift());
     }
 
-    /**
-     * @expectedException OutOfBoundsException
-     */
     public function testInvalidShiftOnEmptyBuffer()
     {
+        $this->expectException(OutOfBoundsException::class);
         $this->buf->shift(1);
     }
 
@@ -81,19 +78,15 @@ class WriteBufferTest extends PHPUnit_Framework_TestCase
         $this->assertEquals("", $this->buf->shift());
     }
 
-    /**
-     * @expectedException InvalidArgumentException
-     */
     public function testInvalidShiftWithZero()
     {
+        $this->expectException(InvalidArgumentException::class);
         $this->buf->shift(0);
     }
 
-    /**
-     * @expectedException InvalidArgumentException
-     */
     public function testInvalidShiftWithNegative()
     {
+        $this->expectException(InvalidArgumentException::class);
         $this->buf->shift(-1);
     }
 }

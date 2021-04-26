@@ -1,6 +1,6 @@
 <?php
 
-class TaskStatusEventTest extends PHPUnit_Framework_TestCase
+class TaskStatusEventTest extends \PHPUnit\Framework\TestCase
 {
     public function testPercentage()
     {

@@ -9,7 +9,7 @@ use Zikarsky\React\Gearman\Event\TaskEvent;
 use Zikarsky\React\Gearman\ClientInterface;
 use React\Promise\FulfilledPromise;
 
-class ClientTest extends PHPUnit_Framework_TestCase
+class ClientTest extends \PHPUnit\Framework\TestCase
 {
 
     /**
@@ -20,7 +20,7 @@ class ClientTest extends PHPUnit_Framework_TestCase
     protected $factory;
     protected $buffer;
 
-    public function setUp()
+    public function setUp(): void
     {
         $stream = $this->createMock(\React\Stream\Stream::class);
         $this->buffer = $this->createPartialMock(\React\Stream\Buffer::class, ['isWritable']);
@@ -242,11 +242,9 @@ class ClientTest extends PHPUnit_Framework_TestCase
         $this->assertTrue($pongEvent);
     }
 
-    /**
-     * @expectedException \Zikarsky\React\Gearman\Command\Exception
-     */
     public function testPingInvalidResponse()
     {
+        $this->expectException(\Zikarsky\React\Gearman\Command\Exception::class);
         $this->client->ping();
         $this->respond("ECHO_RES", [CommandInterface::DATA => "invalid"]);
     }
@@ -418,11 +416,9 @@ class ClientTest extends PHPUnit_Framework_TestCase
         $this->assertTrue($confirmedEvent);
     }
 
-    /**
-     * @expectedException \Zikarsky\React\Gearman\Command\Exception
-     */
     public function testSetOptionInvalidResponse()
     {
+        $this->expectException(\Zikarsky\React\Gearman\Command\Exception::class);
         $confirmed = false;
         $option = ClientInterface::OPTION_FORWARD_EXCEPTIONS;
 
@@ -433,11 +429,9 @@ class ClientTest extends PHPUnit_Framework_TestCase
         $this->respond("OPTION_RES", ['option_name' => "invalid"]);
     }
 
-    /**
-     * @expectedException \Zikarsky\React\Gearman\Command\Exception
-     */
     public function testSetOptionInvalidOption()
     {
+        $this->expectException(\Zikarsky\React\Gearman\Command\Exception::class);
         $this->client->setOption("invalid");
     }
 
@@ -507,28 +501,22 @@ class ClientTest extends PHPUnit_Framework_TestCase
         $this->assertTrue($clientEvent);
     }
 
-    /**
-     * @expectedException \Zikarsky\React\Gearman\Command\Exception
-     */
     public function testGetStatusInvalidResponse()
     {
+        $this->expectException(\Zikarsky\React\Gearman\Command\Exception::class);
         $this->client->getStatus('task');
         $this->respond("STATUS_RES", ['job_handle' => 'invalid']);
     }
 
-    /**
-     * @expectedException \Zikarsky\React\Gearman\Command\Exception
-     */
     public function testErrorPacket()
     {
+        $this->expectException(\Zikarsky\React\Gearman\Command\Exception::class);
         $this->respond("ERROR", ["message" => "error", "code" => 1]);
     }
 
-    /**
-     * @expectedException \Zikarsky\React\Gearman\Command\Exception
-     */
     public function testUnhandledEvent()
     {
+        $this->expectException(\Zikarsky\React\Gearman\Command\Exception::class);
         $this->connection->emit("unhandled-command", [$this->factory->create("GRAB_JOB")]);
     }
 

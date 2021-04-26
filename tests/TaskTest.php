@@ -2,7 +2,7 @@
 
 use Zikarsky\React\Gearman\TaskInterface;
 
-class TaskTest extends PHPUnit_Framework_TestCase
+class TaskTest extends \PHPUnit\Framework\TestCase
 {
     public function testTaskGetters()
     {

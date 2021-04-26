@@ -7,7 +7,7 @@ use Zikarsky\React\Gearman\Command\Binary\CommandInterface;
 use Zikarsky\React\Gearman\Command\Binary\CommandType;
 use Zikarsky\React\Gearman\Protocol\Connection;
 
-class WorkerTest extends PHPUnit_Framework_TestCase
+class WorkerTest extends \PHPUnit\Framework\TestCase
 {
     protected function getConnection()
     {

@@ -1,6 +1,6 @@
 <?php
 
-class DefaultCommandFactoryTest extends PHPUnit_Framework_TestCase
+class DefaultCommandFactoryTest extends \PHPUnit\Framework\TestCase
 {
     private static $maxTypeId = 36;
     private static $minTypeId = 1;
@@ -13,6 +13,8 @@ class DefaultCommandFactoryTest extends PHPUnit_Framework_TestCase
 
     public function testCommandExists()
     {
+        $this->expectNotToPerformAssertions();
+
         $f = new \Zikarsky\React\Gearman\Command\Binary\DefaultCommandFactory();
         for ($i=self::$minTypeId; $i<(self::$maxTypeId+1); $i++) {
             if (in_array($i, self::$missingTypes)) {

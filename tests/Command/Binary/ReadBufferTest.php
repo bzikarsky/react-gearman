@@ -6,7 +6,7 @@ use Zikarsky\React\Gearman\Command\Binary\CommandType;
 use Zikarsky\React\Gearman\Command\Binary\CommandInterface;
 use Zikarsky\React\Gearman\Command\Binary\ReadBuffer;
 
-class ReadBufferTest extends PHPUnit_Framework_TestCase
+class ReadBufferTest extends \PHPUnit\Framework\TestCase
 {
 
     /**
@@ -26,8 +26,7 @@ class ReadBufferTest extends PHPUnit_Framework_TestCase
     protected $reqPacket;
     protected $resPacket;
 
-    public function setUp()
-    {
+    public function setUp(): void    {
         $this->fac = new CommandFactory();
 
         $this->typeA = new CommandType("TEST_A", 1, []);
@@ -42,19 +41,15 @@ class ReadBufferTest extends PHPUnit_Framework_TestCase
         $this->resPacket = new Command($this->typeB, ["a" => "foo", "b" => "bar"], CommandInterface::MAGIC_RESPONSE);
     }
 
-    /**
-     * @expectedException InvalidArgumentException
-     */
     public function testPushInvalidData()
     {
+        $this->expectException(InvalidArgumentException::class);
         $this->buf->push(1);
     }
 
-    /**
-     * @expectedException OutOfBoundsException
-     */
     public function testShiftOnEmptyBuffer()
     {
+        $this->expectException(OutOfBoundsException::class);
         $this->buf->shift();
     }
 
@@ -114,11 +109,9 @@ class ReadBufferTest extends PHPUnit_Framework_TestCase
         }
     }
 
-    /**
-     * @expectedException \Zikarsky\React\Gearman\Command\Exception
-     */
     public function testBrokenPacket()
     {
+        $this->expectException(\Zikarsky\React\Gearman\Command\Exception::class);
         $this->buf->push($this->brokenPacketStr);
     }
 }

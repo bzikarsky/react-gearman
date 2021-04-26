@@ -4,7 +4,7 @@ use Zikarsky\React\Gearman\Command\Binary\CommandType;
 use Zikarsky\React\Gearman\Command\Binary\Command;
 use Zikarsky\React\Gearman\Command\Binary\CommandInterface;
 
-class CommandTest extends PHPUnit_Framework_TestCase
+class CommandTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var CommandType
@@ -13,25 +13,16 @@ class CommandTest extends PHPUnit_Framework_TestCase
     protected $data;
     protected $command;
 
-    public function setUp()
-    {
+    public function setUp(): void    {
         $this->type = new CommandType("TEST", 1, ["arg1", "arg2"]);
         $this->data = ["arg1" => 1];
         $this->magic = CommandInterface::MAGIC_REQUEST;
-        $this->command = $this->testCreate();
+        $this->command = new Command($this->type, $this->data, $this->magic);
     }
 
-    public function testCreate()
-    {
-        return new Command($this->type, $this->data, $this->magic);
-    }
-
-
-    /**
-     * @expectedException InvalidArgumentException
-     */
     public function testCreateInvalidData()
     {
+        $this->expectException(InvalidArgumentException::class);
         return new Command($this->type, ["foo" => "bar"], $this->magic);
     }
 
@@ -73,27 +64,20 @@ class CommandTest extends PHPUnit_Framework_TestCase
         $this->assertEquals(["arg1" => -1, "arg2" => 2], $cmd->getAll("test"));
     }
 
-    /**
-     * @expectedException InvalidArgumentException
-     */
     public function testInvalidArgumentSet()
     {
+        $this->expectException(InvalidArgumentException::class);
         $this->command->set("invalid", "test");
     }
 
-    /**
-     * @expectedException InvalidArgumentException
-     */
     public function testInvalidArgumentGet()
     {
+        $this->expectException(InvalidArgumentException::class);
         $this->command->get("invalid");
     }
 
 
-    /**
-     * @depends testCreate
-     */
-    public function testToString(Command $cmd)
+    public function testToString()
     {
         $this->assertEquals("TEST(1)[arg1=1&arg2=NULL]", (string) $this->command);
 
