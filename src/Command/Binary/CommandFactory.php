@@ -16,28 +16,24 @@ class CommandFactory implements CommandFactoryInterface
     /**
      * @var CommandType[]
      */
-    protected $typesByName = [];
+    protected array $typesByName = [];
 
     /**
      * @var CommandType[]
      */
-    protected $typesByCode = [];
+    protected array $typesByCode = [];
 
-    /**
-     * @param CommandType $type
-     */
-    public function addType(CommandType $type)
+    public function addType(CommandType $type): void
     {
         $this->typesByName[$type->getName()] = $type;
         $this->typesByCode[$type->getType()] = $type;
     }
 
     /**
-     * @param $type
-     * @return CommandType
+     * @param string|int $type
      * @throws InvalidArgumentException
      */
-    public function getType($type)
+    public function getType($type): CommandType
     {
         return is_string($type)
             ? $this->getTypeByName($type)
@@ -46,13 +42,11 @@ class CommandFactory implements CommandFactoryInterface
     }
 
     /**
-     * @param  integer                  $code
-     * @return CommandType
      * @throws InvalidArgumentException
      */
-    public function getTypeByCode($code)
+    public function getTypeByCode(int $code): CommandType
     {
-        if (!is_int($code) || !isset($this->typesByCode[$code])) {
+        if (!isset($this->typesByCode[$code])) {
             throw new InvalidArgumentException(__METHOD__  . ' requires $code to be a CommandType identifying integer code');
         }
 
@@ -60,14 +54,11 @@ class CommandFactory implements CommandFactoryInterface
     }
 
     /**
-     * @param  string      $name
-     * @return CommandType
-     *
      * @throws InvalidArgumentException
      */
-    public function getTypeByName($name)
+    public function getTypeByName(string $name): CommandType
     {
-        if (!is_string($name) || !isset($this->typesByName[$name])) {
+        if (!isset($this->typesByName[$name])) {
             throw new InvalidArgumentException(__METHOD__  . " requires $name to be a CommandType identifying name-string");
         }
 
@@ -78,11 +69,8 @@ class CommandFactory implements CommandFactoryInterface
      * Creates a command
      *
      * @param  string|integer $type
-     * @param  array          $data
-     * @param  string         $magic
-     * @return Command
      */
-    public function create($type, array $data = [], $magic = CommandInterface::MAGIC_REQUEST)
+    public function create($type, array $data = [], string $magic = CommandInterface::MAGIC_REQUEST): Command
     {
         return new Command($this->getType($type), $data, $magic);
     }

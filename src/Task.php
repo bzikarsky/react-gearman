@@ -6,32 +6,13 @@ use Evenement\EventEmitter;
 
 class Task extends EventEmitter implements TaskInterface
 {
-    /**
-     * @var string
-     */
-    protected $function;
+    protected string $function;
+    protected ?string $workload;
+    protected string $handle;
+    protected string $priority;
+    protected string $uniqueId;
 
-    /**
-     * @var string
-     */
-    protected $workload;
-
-    /**
-     * @var string
-     */
-    protected $handle;
-
-    /**
-     * @var string
-     */
-    protected $priority;
-
-    /**
-     * @var string
-     */
-    protected $uniqueId;
-
-    public function __construct($function, $workload, $handle, $priority, $uniqueId)
+    public function __construct(string $function, ?string $workload, string $handle, string $priority, string $uniqueId)
     {
         $this->function = $function;
         $this->workload = $workload;
@@ -40,42 +21,27 @@ class Task extends EventEmitter implements TaskInterface
         $this->uniqueId = $uniqueId;
     }
 
-    /**
-     * @return string
-     */
-    public function getFunction()
+    public function getFunction(): string
     {
         return $this->function;
     }
 
-    /**
-     * @return string
-     */
-    public function getHandle()
+    public function getHandle(): string
     {
         return $this->handle;
     }
 
-    /**
-     * @return string
-     */
-    public function getWorkload()
+    public function getWorkload(): ?string
     {
         return $this->workload;
     }
 
-    /**
-     * @return string
-     */
-    public function getPriority()
+    public function getPriority(): string
     {
         return $this->priority;
     }
 
-    /**
-     * @return string
-     */
-    public function getUniqueId()
+    public function getUniqueId(): string
     {
         return $this->uniqueId;
     }

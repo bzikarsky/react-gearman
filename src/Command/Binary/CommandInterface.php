@@ -15,108 +15,75 @@ interface CommandInterface
 
     /**
      * Magic bytes for a REQUEST command
-     *
-     * @const string
      */
-    const MAGIC_REQUEST     = "\0REQ";
+    public const MAGIC_REQUEST     = "\0REQ";
 
     /**
      * Magic bytes for a RESPONSE command
-     *
-     * @const string
      */
-    const MAGIC_RESPONSE    = "\0RES";
+    public const MAGIC_RESPONSE    = "\0RES";
 
     /**
      * Argument identifier for opaque command data
-     *
-     * @const string
      */
-    const DATA = '*';
+    public const DATA = '*';
 
     /**
      * Format definition for a command's packet-header in php.net/unpack syntax
-     *
-     * @const string
      */
-    const HEADER_READ_FORMAT = 'a4magic/Ntype/Nsize';
+    public const HEADER_READ_FORMAT = 'a4magic/Ntype/Nsize';
 
     /**
      * Format definition for a command's packet-header in php.net/pack syntax
-     *
-     * @const string
      */
-    const HEADER_WRITE_FORMAT = 'a4NN';
+    public const HEADER_WRITE_FORMAT = 'a4NN';
 
     /**
      * Byte-length of a packet-header
-     *
-     * @const integer
      */
-    const HEADER_LENGTH = 12;
+    public const HEADER_LENGTH = 12;
 
     /**
      * Delimiter for a command's arguments
-     *
-     * @const string
      */
-    const ARGUMENT_DELIMITER = "\0";
+    public const ARGUMENT_DELIMITER = "\0";
 
     /**
      * Returns the command's argument-value
      * If the argument is not set yet, $default is returned
-     *
-     * @param  string                   $key
-     * @param  null                     $default
-     * @return mixed
      * @throws InvalidArgumentException
      */
-    public function get($key, $default = null);
+    public function get(string $key, $default = null);
 
     /**
      * Set the command's argument to given value
-     *
-     * @param  string                   $key
-     * @param  mixed                    $value
      * @throws InvalidArgumentException
      */
-    public function set($key, $value);
+    public function set(string $key, $value);
 
     /**
      * Returns all arguments as key => value pairs in defined order
      * If one argument has no value yet, $default is returned
-     *
-     * @param  null  $default
-     * @return array
      */
-    public function getAll($default = null);
+    public function getAll($default = null): array;
 
     /**
      * Returns the command's name
-     *
-     * @return string
      */
-    public function getName();
+    public function getName(): string;
 
     /**
      * Returns the command's type
-     *
-     * @return integer
      */
-    public function getType();
+    public function getType(): int;
 
     /**
      * Returns the command's magic bytes
-     *
-     * @return string
      */
-    public function getMagic();
+    public function getMagic(): string;
 
     /**
      * Returns whether the job is one of the given command types
-     *
-     * @param string ...$type
-     * @return bool
      */
     public function is(string ...$type): bool;
 }

@@ -7,6 +7,7 @@ use React\Promise\Promise;
 use React\Promise\PromiseInterface;
 use React\Promise\RejectedPromise;
 use React\Stream\DuplexStreamInterface;
+use React\Stream\WritableStreamInterface;
 use Zikarsky\React\Gearman\Command\Binary\CommandFactoryInterface;
 use Zikarsky\React\Gearman\Command\Binary\CommandInterface;
 use Zikarsky\React\Gearman\Command\Binary\ReadBuffer;
@@ -32,40 +33,17 @@ use function React\Promise\reject;
  */
 class Connection extends EventEmitter
 {
-    /**
-     * @var WriteBuffer
-     */
-    protected $writeBuffer;
-
-    /**
-     * @var ReadBuffer
-     */
-    protected $readBuffer;
-
-    /**
-     * @var Stream
-     */
-    protected $stream;
-
-    /**
-     * @var CommandFactoryInterface
-     */
-    protected $commandFactory;
-
-    /**
-     * @var bool
-     */
-    protected $closed = false;
-
-    /**
-     * @var LoggerInterface
-     */
-    protected $logger = null;
+    protected WriteBuffer $writeBuffer;
+    protected ReadBuffer $readBuffer;
+    protected DuplexStreamInterface $stream;
+    protected CommandFactoryInterface $commandFactory;
+    protected LoggerInterface $logger;
 
     /**
      * @var Deferred[]
      */
-    protected $commandSendQueue = [];
+    protected array $commandSendQueue = [];
+    protected bool $closed = false;
 
     /**
      * Creates the connection on top of the async stream and with the given
@@ -103,19 +81,18 @@ class Connection extends EventEmitter
 
     /**
      * Sets a protocol logger
-     * @param LoggerInterface $logger
      */
-    public function setLogger(LoggerInterface $logger)
+    public function setLogger(LoggerInterface $logger): void
     {
         $this->logger = $logger;
     }
 
-    public function pause()
+    public function pause(): void
     {
         $this->stream->pause();
     }
 
-    public function resume()
+    public function resume(): void
     {
         $this->stream->resume();
     }

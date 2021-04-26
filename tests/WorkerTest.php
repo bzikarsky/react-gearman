@@ -13,12 +13,7 @@ class WorkerTest extends \PHPUnit\Framework\TestCase
     {
         $fac = new Gearman\Command\Binary\DefaultCommandFactory();
 
-        $stream = $this->getMockBuilder(\React\Stream\Stream::class)
-            ->setMethods(['write', 'close', 'getBuffer'])
-            ->disableOriginalConstructor()
-            ->getMock();
-        $buffer = $this->createMock(\React\Stream\Buffer::class);
-        $stream->expects($this->any())->method('getBuffer')->willReturn($buffer);
+        $stream = $this->createMock(\React\Stream\DuplexStreamInterface::class);
         return new Connection($stream, $fac);
     }
 
@@ -27,7 +22,7 @@ class WorkerTest extends \PHPUnit\Framework\TestCase
         $connection = $this->getConnection();
         return [
             $this->getMockBuilder(Gearman\Worker::class)
-                ->setMethods($mockedMethods)
+                ->onlyMethods($mockedMethods)
                 ->setConstructorArgs([$connection, $uniq])
                 ->getMock(),
             $connection

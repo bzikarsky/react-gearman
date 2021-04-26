@@ -6,26 +6,14 @@ use Zikarsky\React\Gearman\TaskInterface;
 
 class TaskEvent implements TaskEventInterface
 {
+    protected TaskInterface $task;
 
-    /**
-     * @var TaskInterface
-     */
-    protected $task;
-
-    /**
-     * Creates a task event
-     *
-     * @param TaskInterface $task
-     */
     public function __construct(TaskInterface $task)
     {
         $this->task = $task;
     }
 
-    /**
-     * @return TaskInterface
-     */
-    public function getTask()
+    public function getTask(): TaskInterface
     {
         return $this->task;
     }

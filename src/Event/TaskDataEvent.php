@@ -6,16 +6,16 @@ use Zikarsky\React\Gearman\TaskInterface;
 
 class TaskDataEvent extends TaskEvent
 {
-    protected $data = "";
+    protected string $data = "";
 
-    public function __construct(TaskInterface $task, $data)
+    public function __construct(TaskInterface $task, string $data)
     {
         parent::__construct($task);
 
         $this->data = $data;
     }
 
-    public function getData()
+    public function getData(): string
     {
         return $this->data;
     }

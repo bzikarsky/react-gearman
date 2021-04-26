@@ -3,6 +3,7 @@
 namespace Zikarsky\React\Gearman;
 
 use React\Promise\Promise;
+use React\Promise\PromiseInterface;
 
 /**
  * A Job is the representation of a unit-of-work on the worker-side.
@@ -14,40 +15,30 @@ use React\Promise\Promise;
  */
 interface JobInterface
 {
-    const STATUS_RUNNING = "running";
-    const STATUS_COMPLETED = "completed";
-    const STATUS_FAILED = "failed";
+    public const STATUS_RUNNING = "running";
+    public const STATUS_COMPLETED = "completed";
+    public const STATUS_FAILED = "failed";
 
 
     /**
       * Get the function-name of this job
-      *
-      * @return string
       */
-    public function getFunction();
+    public function getFunction(): string;
 
     /**
      * Returns the job-handle of this job
-     *
-     * @return string
      */
-    public function getHandle();
+    public function getHandle(): string;
 
     /**
      * Returns the workload of this job
-     *
-     * @return string
      */
-    public function getWorkload();
+    public function getWorkload(): ?string;
 
     /**
      * Sends the current status of this job to the server
-     *
-     * @param  int $numerator
-     * @param  int $denominator
-     * @return Promise
      */
-    public function sendStatus($numerator, $denominator);
+    public function sendStatus(int $numerator, int $denominator): PromiseInterface;
 
     /**
      * Sends data for the job to the job-server
@@ -55,31 +46,22 @@ interface JobInterface
      * @param  string data
      * @return Promise
      */
-    public function sendData($data);
+    public function sendData(string $data): PromiseInterface;
 
     /**
      * Sends a warning for this job to the job-server
-     *
-     * @param  string data
-     * @return Promise
      */
-    public function sendWarning($warning);
+    public function sendWarning(?string $warning = null): PromiseInterface;
 
     /**
      * Sends the result data and marks job as completed
-     *
-     * @param null $data
-     * @return mixed
      */
-    public function complete($data = null);
+    public function complete(?string $data = null): PromiseInterface;
 
     /**
      * Fails the job with optional error message
-     *
-     * @param null $error
-     * @return mixed
      */
-    public function fail($error = null);
+    public function fail(?string $error = null): PromiseInterface;
 
-    public function getId();
+    public function getId(): ?string;
 }

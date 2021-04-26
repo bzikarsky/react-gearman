@@ -6,79 +6,42 @@ use Zikarsky\React\Gearman\TaskInterface;
 
 class TaskStatusEvent extends TaskEvent
 {
-    /**
-     * @var boolean
-     */
-    protected $known;
+    protected bool $known;
+    protected bool $running;
+    protected int $numerator;
+    protected int $denominator;
 
-    /**
-     * @var boolean
-     */
-    protected $running;
-
-    /**
-     * @var integer
-     */
-    protected $numerator;
-
-    /**
-     * @var integer
-     */
-    protected $denominator;
-
-    /**
-     * @param TaskInterface $task
-     * @param boolean       $known
-     * @param boolean       $running
-     * @param integer       $numerator
-     * @param integer       $denominator
-     */
-    public function __construct(TaskInterface $task, $known, $running, $numerator, $denominator)
+    public function __construct(TaskInterface $task, bool $known, bool $running, int $numerator, int $denominator)
     {
         parent::__construct($task);
 
-        $this->known        = (bool) $known;
-        $this->running      = (bool) $running;
-        $this->numerator    = (int) $numerator;
-        $this->denominator  = (int) $denominator;
+        $this->known        = $known;
+        $this->running      = $running;
+        $this->numerator    = $numerator;
+        $this->denominator  = $denominator;
     }
 
-    /**
-     * @return int
-     */
-    public function getCompletionDenominator()
+    public function getCompletionDenominator(): int
     {
         return $this->denominator;
     }
 
-    /**
-     * @return boolean
-     */
-    public function getKnown()
+    public function getKnown(): bool
     {
         return $this->known;
     }
 
-    /**
-     * @return int
-     */
-    public function getCompletionNumerator()
+    public function getCompletionNumerator(): int
     {
         return $this->numerator;
     }
 
-    /**
-     * @return boolean
-     */
-    public function getRunning()
+    public function getRunning(): bool
     {
         return $this->running;
     }
 
-    /**
-     * @return float
-     */
-    public function getCompletionPercentage()
+    public function getCompletionPercentage(): float
     {
         return $this->numerator / $this->denominator;
     }

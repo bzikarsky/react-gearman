@@ -7,61 +7,35 @@ use Evenement\EventEmitter;
 class UnknownTask extends EventEmitter implements TaskInterface
 {
 
-    /**
-     * @var string
-     */
-    protected $handle;
+    protected string $handle;
 
-    public function __construct($handle)
+    public function __construct(string $handle)
     {
         $this->handle = $handle;
     }
 
-    /**
-     * @return string
-     */
-    public function getHandle()
+    public function getHandle(): string
     {
         return $this->handle;
     }
 
-    /**
-     * Returns null since the submitted function of an unknown task is unknown
-     *
-     * @return null
-     */
-    public function getFunction()
+    public function getFunction(): string
+    {
+        return '';
+    }
+
+    public function getWorkload(): ?string
     {
         return null;
     }
 
-    /**
-     * Returns null since the submitted workload of an unknown task is unknown
-     *
-     * @return null
-     */
-    public function getWorkload()
+    public function getPriority(): string
     {
-        return null;
+        return '';
     }
 
-    /**
-     * Returns null since the priority of an unknown task is unknown
-     *
-     * @return null
-     */
-    public function getPriority()
+    public function getUniqueId(): string
     {
-        return null;
-    }
-
-    /**
-     * Returns null since the id of an unknown task is unknown
-     *
-     * @return null
-     */
-    public function getUniqueId()
-    {
-        return null;
+        return '';
     }
 }

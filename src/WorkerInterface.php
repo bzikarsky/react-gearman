@@ -3,6 +3,7 @@
 namespace Zikarsky\React\Gearman;
 
 use React\Promise\Promise;
+use React\Promise\PromiseInterface;
 use RuntimeException;
 
 /**
@@ -15,19 +16,14 @@ interface WorkerInterface
 {
     /**
      * Sets the worker's ID for server monitoring/reporting
-     *
-     * @param  string $id
-     * @return Promise
      */
-    public function setId($id);
+    public function setId(string $id): PromiseInterface;
 
     /**
      * Pings the server, promise is resolved on pong.
      * Also the ping event is fired
-     *
-     * @return Promise
      */
-    public function ping();
+    public function ping(): PromiseInterface;
 
     /**
      * Register a function on the job-server
@@ -38,77 +34,60 @@ interface WorkerInterface
      *
      * An optional $timeout in seconds can be defined after which the server
      * assumes the job to be timed out.
-     *
-     * @param  string $function
-     * @param  callable $callback
-     * @param  int $timeout timeout in seconds, optional, defaults to null
-     * @return Promise
      */
-    public function register($function, callable $callback, $timeout = null);
+    public function register(string $function, callable $callback, ?int $timeout = null): PromiseInterface;
 
     /**
      * Unregister a function from the job-server
      *
      * If the functions has not been registered a RuntimeException is thrown
-     *
-     * @param  string $function
-     * @return Promise
+
      * @throws RuntimeException on unknown function-name
      */
-    public function unregister($function);
+    public function unregister(string $function): PromiseInterface;
 
     /**
      * Unregisters all functions from the job-server
-     *
-     * @return Promise
      */
-    public function unregisterAll();
+    public function unregisterAll(): PromiseInterface;
 
     /**
      * Returns a list of all registered functions
      *
      * @return string[]
      */
-    public function getRegisteredFunctions();
+    public function getRegisteredFunctions(): array;
 
     /**
      * Disconnects the worker from the server
      */
-    public function disconnect();
+    public function disconnect(): void;
 
-    /**
-     * @param $maxParallelRequests
-     * @return mixed
-     */
-    public function setMaxParallelRequests($maxParallelRequests);
+    public function setMaxParallelRequests(int $maxParallelRequests): void;
 
     /**
      * Stop accepting new jobs
      */
-    public function pause();
+    public function pause(): void;
 
     /**
      * Accept new jobs again
      */
-    public function resume();
+    public function resume(): void;
 
     /**
      * @return JobInterface[]
      */
-    public function getRunningJobs();
+    public function getRunningJobs(): array;
 
     /**
      * Shutdown worker gracefully
      * Stop accepting new jobs, Process all pending jobs, then disconnect
-     *
-     * @return Promise
      */
-    public function shutdown();
+    public function shutdown(): PromiseInterface;
 
     /**
      * Shut down immediately. Do not wait for jobs to finish
-     *
-     * @return Promise
      */
-    public function forceShutdown();
+    public function forceShutdown(): PromiseInterface;
 }

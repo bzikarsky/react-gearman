@@ -18,9 +18,9 @@ class TaskTest extends \PHPUnit\Framework\TestCase
     {
         $task = new \Zikarsky\React\Gearman\UnknownTask("handle");
 
-        $this->assertNull($task->getFunction());
+        $this->assertEmpty($task->getFunction());
         $this->assertNull($task->getWorkload());
         $this->assertEquals("handle", $task->getHandle());
-        $this->assertNull($task->getPriority());
+        $this->assertEmpty($task->getPriority());
     }
 }

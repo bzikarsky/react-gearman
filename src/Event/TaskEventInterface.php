@@ -6,9 +6,5 @@ use Zikarsky\React\Gearman\TaskInterface;
 
 interface TaskEventInterface
 {
-
-    /**
-     * @return TaskInterface
-     */
-    public function getTask();
+    public function getTask(): TaskInterface;
 }

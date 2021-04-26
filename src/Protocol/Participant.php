@@ -23,16 +23,10 @@ use function React\Promise\resolve;
  */
 abstract class Participant extends EventEmitter
 {
-
-    /**
-     * @var Connection
-     */
-    private $connection;
+    private Connection $connection;
 
     /**
      * Queued requests to be sent, requests are enqueued if send is currently locked
-     *
-     * @var array
      */
     protected array $sendQueue = [];
 
@@ -63,10 +57,8 @@ abstract class Participant extends EventEmitter
     /**
      * Pings the server with random data, and expects a pong with the same information
      * The returned promise is resolved with TRUE as soon the pong request hits the client
-     *
-     * @return Promise
      */
-    public function ping()
+    public function ping(): PromiseInterface
     {
         $command = $this->getCommandFactory()->create("ECHO_REQ", [
             CommandInterface::DATA => uniqid('', true)
@@ -97,19 +89,14 @@ abstract class Participant extends EventEmitter
      *
      * This action sends the given command, and executes the handler upon receiving the defined event-name
      * All other sent commands are queued until the handler resolves the initial action-promise
-     *
-     * @param  CommandInterface $command
-     * @param  string $eventName
-     * @param  callable $handler
-     * @return Promise
      */
-    protected function blockingAction(CommandInterface $command, string $eventName, callable $handler)
+    protected function blockingAction(CommandInterface $command, string $eventName, callable $handler): PromiseInterface
     {
         // create the deferred action to execute $handler on $eventName after sending $command
         $deferred = new Deferred();
         $this->blockingActionStart();
 
-        $failListener = function () use ($deferred, $eventName, &$successListener) {
+        $failListener = function () use ($deferred) {
             $deferred->reject(new ConnectionLostException());
         };
 
@@ -131,7 +118,7 @@ abstract class Participant extends EventEmitter
 
         // send command
         $promise = $deferred->promise();
-        $this->send($command, $promise)->then(
+        $this->sendDeferred($command, $promise)->then(
             function () use ($eventName, $successListener, $failListener) {
                 $this->connection->once($eventName, $successListener);
                 $this->connection->once('close', $failListener);
@@ -146,14 +133,10 @@ abstract class Participant extends EventEmitter
      *
      * A lock-promise can be passed in optionally. All subsequent calls to send() are then queued until the
      * promise resolves
-     *
-     * @param  CommandInterface $command
-     * @param  Promise $lock
      */
-    protected function send(CommandInterface $command, ?Promise $lock = null): PromiseInterface
+    protected function send(CommandInterface $command): PromiseInterface
     {
-        // request deferred sending
-        return $this->sendDeferred($command, $lock);
+        return $this->sendDeferred($command);
     }
 
     /**
@@ -182,7 +165,6 @@ abstract class Participant extends EventEmitter
         //  - install an error-handler to communicate the failure
         $this->sendIsLocked = true;
 
-
         // Define unlock-handler which resumes sending
         $onUnlock = function () {
             $this->sendIsLocked = false;
@@ -210,25 +192,21 @@ abstract class Participant extends EventEmitter
 
     /**
      * Returns the connection
-     *
-     * @return Connection
      */
-    protected function getConnection()
+    protected function getConnection(): Connection
     {
         return $this->connection;
     }
 
     /**
      * Returns the command-factory
-     *
-     * @return CommandFactoryInterface
      */
-    protected function getCommandFactory()
+    protected function getCommandFactory(): CommandFactoryInterface
     {
         return $this->connection->getCommandFactory();
     }
 
-    public function disconnect()
+    public function disconnect(): void
     {
         $this->connection->close();
     }

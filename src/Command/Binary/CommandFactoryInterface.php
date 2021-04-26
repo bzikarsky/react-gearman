@@ -14,9 +14,6 @@ interface CommandFactoryInterface
      * a Commands arguments.
      *
      * @param  string|integer   $type
-     * @param  array            $data
-     * @param  string           $magic
-     * @return CommandInterface
      */
-    public function create($type, array $data = [], $magic = CommandInterface::MAGIC_REQUEST);
+    public function create($type, array $data = [], string $magic = CommandInterface::MAGIC_REQUEST): CommandInterface;
 }

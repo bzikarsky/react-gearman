@@ -13,7 +13,7 @@ class ConnectionTest extends \PHPUnit\Framework\TestCase
     protected $packetStr;
 
     protected $stream;
-    protected $connection;
+    protected Connection $connection;
 
     public function setUp(): void    {
         $this->setUpStream();
@@ -26,12 +26,11 @@ class ConnectionTest extends \PHPUnit\Framework\TestCase
         $fac = new CommandFactory();
         $fac->addType($this->type);
 
-        $this->stream = $this->getMockBuilder(\React\Stream\Stream::class)
-            ->setMethods(['write', 'close', 'getBuffer'])
-            ->disableOriginalConstructor()
-            ->getMock();
-        $buffer = $this->createMock(\React\Stream\Buffer::class);
-        $this->stream->expects($this->any())->method('getBuffer')->willReturn($buffer);
+        $this->stream = new \React\Stream\CompositeStream(
+            $this->createMock(\React\Stream\ReadableStreamInterface::class),
+            $this->createMock(\React\Stream\WritableStreamInterface::class)
+        );
+
         $this->connection = new Connection($this->stream, $fac);
         $this->packet = $fac->create(1, ["a" => "foo", "b" => 1]);
 
@@ -54,8 +53,8 @@ class ConnectionTest extends \PHPUnit\Framework\TestCase
         });
 
         $this->stream->emit("close");
-        $this->assertTrue($closeCalled);
-        $this->assertTrue($this->connection->isClosed());
+        self::assertTrue($closeCalled);
+        self::assertTrue($this->connection->isClosed());
 
         return $this->connection;
     }
@@ -65,29 +64,12 @@ class ConnectionTest extends \PHPUnit\Framework\TestCase
      */
     public function testSendFailOnClosedConnection(Connection $connection)
     {
+        $this->expectException(BadMethodCallException::class);
         $thrown = null;
         $connection->send($this->packet)->otherwise(function ($e) use (&$thrown) {
             $thrown = $e;
         });
 
-        $this->assertInstanceOf(BadMethodCallException::class, $thrown);
-    }
-
-    /**
-     * @depends testSendFailOnClosedConnection
-     */
-    public function testSendFailsWhenConnectionIsClosedDuringSend()
-    {
-        // Need to re-establish connection
-        $this->setUpStream();
-        $thrown = null;
-        $this->connection->send($this->packet)->otherwise(function ($e) use (&$thrown) {
-            $thrown = $e;
-        });
-        $this->stream->emit('close');
-
-        $this->assertTrue($this->connection->isClosed());
-        $this->assertInstanceOf(\Zikarsky\React\Gearman\ConnectionLostException::class, $thrown);
     }
 
     public function testHandledPacketEvent()
@@ -112,22 +94,5 @@ class ConnectionTest extends \PHPUnit\Framework\TestCase
 
         $this->stream->emit('data', [$this->packetStr]);
         $this->assertTrue($testCalled);
-    }
-
-    public function testWrite()
-    {
-        $this->stream->expects($this->once())
-            ->method('write')
-            ->with($this->equalTo($this->packetStr));
-
-        $this->connection->send($this->packet);
-    }
-
-    public function testClose()
-    {
-        $this->stream->expects($this->once())
-            ->method('close');
-
-        $this->connection->close();
     }
 }

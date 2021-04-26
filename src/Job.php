@@ -2,28 +2,30 @@
 
 namespace Zikarsky\React\Gearman;
 
+use Closure;
+use React\Promise\PromiseInterface;
 use Zikarsky\React\Gearman\Command\Binary\CommandInterface;
 use Evenement\EventEmitter;
 
 class Job extends EventEmitter implements JobInterface
 {
-    protected $send;
-    protected $function;
-    protected $handle;
-    protected $workload;
-    protected $id;
-    protected $status = self::STATUS_RUNNING;
+    protected Closure $send;
+    protected string $function;
+    protected string $handle;
+    protected ?string $workload;
+    protected ?string $id;
+    protected string $status = self::STATUS_RUNNING;
 
-    public function __construct(callable $sender, $function, $handle, $workload, $id = null)
+    public function __construct(callable $sender, string $function, string $handle, ?string $workload, ?string $id = null)
     {
-        $this->send = $sender;
+        $this->send = Closure::fromCallable($sender);
         $this->function = $function;
         $this->handle = $handle;
         $this->workload = $workload;
         $this->id = $id;
     }
 
-    public static function fromCommand(CommandInterface $command, callable $sender)
+    public static function fromCommand(CommandInterface $command, callable $sender): self
     {
         if (!$command->is('JOB_ASSIGN')) {
             throw new \RuntimeException('Can only create a Job from a JOB_ASSIGN command');
@@ -38,7 +40,7 @@ class Job extends EventEmitter implements JobInterface
         );
     }
 
-    public static function uniqueFromCommand(CommandInterface $command, callable $sender)
+    public static function uniqueFromCommand(CommandInterface $command, callable $sender): self
     {
         if (!$command->is('JOB_ASSIGN_UNIQ')) {
             throw new \RuntimeException('Can only create a unique Job from a JOB_ASSIGN_UNIQ command');
@@ -53,27 +55,27 @@ class Job extends EventEmitter implements JobInterface
         );
     }
 
-    public function getFunction()
+    public function getFunction(): string
     {
         return $this->function;
     }
 
-    public function getHandle()
+    public function getHandle(): string
     {
         return $this->handle;
     }
 
-    public function getWorkload()
+    public function getWorkload(): ?string
     {
         return $this->workload;
     }
 
-    public function getId()
+    public function getId(): ?string
     {
         return $this->id;
     }
 
-    public function sendStatus($numerator, $denominator)
+    public function sendStatus(int $numerator, int $denominator): PromiseInterface
     {
         $this->assertStatus(self::STATUS_RUNNING);
         $payload = [
@@ -85,7 +87,7 @@ class Job extends EventEmitter implements JobInterface
         return call_user_func($this->send, 'WORK_STATUS', $payload);
     }
 
-    public function sendData($data)
+    public function sendData(string $data): PromiseInterface
     {
         $this->assertStatus(self::STATUS_RUNNING);
         $payload = [
@@ -96,7 +98,7 @@ class Job extends EventEmitter implements JobInterface
         return call_user_func($this->send, 'WORK_DATA', $payload);
     }
 
-    public function sendWarning($warning = null)
+    public function sendWarning(?string $warning = null): PromiseInterface
     {
         $this->assertStatus(self::STATUS_RUNNING);
         $payload = [
@@ -107,14 +109,14 @@ class Job extends EventEmitter implements JobInterface
         return call_user_func($this->send, 'WORK_WARNING', $payload);
     }
 
-    public function fail($error = null)
+    public function fail(?String $error = null): PromiseInterface
     {
         return null === $error
             ? $this->sendError()
             : $this->sendException($error);
     }
 
-    protected function sendException($exception)
+    protected function sendException(string $exception): PromiseInterface
     {
         $this->assertStatus(self::STATUS_RUNNING);
         $this->setStatus(self::STATUS_FAILED);
@@ -127,7 +129,7 @@ class Job extends EventEmitter implements JobInterface
         return call_user_func($this->send, 'WORK_EXCEPTION', $payload);
     }
 
-    protected function sendError()
+    protected function sendError(): PromiseInterface
     {
         $this->assertStatus(self::STATUS_RUNNING);
         $this->setStatus(self::STATUS_FAILED);
@@ -137,7 +139,7 @@ class Job extends EventEmitter implements JobInterface
         return call_user_func($this->send, 'WORK_FAIL', $payload);
     }
 
-    public function complete($data = null)
+    public function complete(?string $data = null): PromiseInterface
     {
         $this->assertStatus(self::STATUS_RUNNING);
         $this->setStatus(self::STATUS_COMPLETED);
@@ -149,18 +151,18 @@ class Job extends EventEmitter implements JobInterface
         return call_user_func($this->send, 'WORK_COMPLETE', $payload);
     }
 
-    public function getStatus()
+    public function getStatus(): string
     {
         return $this->status;
     }
 
-    protected function setStatus($status)
+    protected function setStatus(string $status): void
     {
         $this->status = $status;
         $this->emit('status-change', [$status, $this]);
     }
 
-    protected function assertStatus($status)
+    protected function assertStatus(string $status): void
     {
         if ($status !== $this->status) {
             throw new \RuntimeException("Job is not in status {$this->status} instead of {$status}");

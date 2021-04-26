@@ -20,42 +20,32 @@ use Evenement\EventEmitterInterface;
  */
 interface TaskInterface extends EventEmitterInterface
 {
-    const PRIORITY_LOW      = "low";
-    const PRIORITY_NORMAL   = "";
-    const PRIORITY_HIGH     = "high";
+    public const PRIORITY_LOW      = "low";
+    public const PRIORITY_NORMAL   = "";
+    public const PRIORITY_HIGH     = "high";
 
     /**
      * Returns the function-name of the task
-     *
-     * @return string
      */
-    public function getFunction();
+    public function getFunction(): string;
 
     /**
      * Returns the job-handle of the task
-     *
-     * @return string
      */
-    public function getHandle();
+    public function getHandle(): string;
 
     /**
      * Returns the workload of this task
-     *
-     * @return string
      */
-    public function getWorkload();
+    public function getWorkload(): ?string;
 
     /**
      * Returns the task's priority
-     *
-     * @return string
      */
-    public function getPriority();
+    public function getPriority(): string;
 
     /**
      * Returns the task's unique id
-     *
-     * @return string
      */
-    public function getUniqueId();
+    public function getUniqueId(): string;
 }

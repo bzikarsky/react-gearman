@@ -6,22 +6,11 @@ use InvalidArgumentException;
 
 class Command implements CommandInterface
 {
-    /**
-     * @var CommandType
-     */
-    protected $type;
+    private CommandType $type;
+    private array $data = [];
+    private string $magic;
 
-    /**
-     * @var array
-     */
-    protected $data = [];
-
-    /**
-     * @var string
-     */
-    protected $magic;
-
-    public function __construct(CommandType $type, array $data, $magic)
+    public function __construct(CommandType $type, array $data, string $magic)
     {
         $this->type = $type;
         $this->magic = $magic;
@@ -31,16 +20,16 @@ class Command implements CommandInterface
         }
     }
 
-    public function __toString()
+    public function __toString(): string
     {
         $values = array_map(function ($key) {
-            return $key . "=" . $this->get($key, "NULL", true);
+            return $key . "=" . $this->get($key, "NULL");
         }, $this->type->getArguments());
 
         return $this->type->__toString() . '[' . implode('&', $values) . ']';
     }
 
-    public function set($key, $value)
+    public function set($key, $value): void
     {
         if (!$this->type->hasArgument($key)) {
             throw new InvalidArgumentException($this->type->getName() . "  does not have a $key argument");
@@ -49,18 +38,18 @@ class Command implements CommandInterface
         $this->data[$key] = $value;
     }
 
-    public function get($key, $default = null)
+    public function get(string $key, $default = null)
     {
         if (!$this->type->hasArgument($key)) {
             throw new InvalidArgumentException($this->type->getName() . "  does not have a $key argument");
         }
 
-        $data = isset($this->data[$key]) ? $this->data[$key] : $default;
+        $data = $this->data[$key] ?? $default;
 
         return $data;
     }
 
-    public function getAll($default = null)
+    public function getAll($default = null): array
     {
         $args = [];
         foreach ($this->type->getArguments() as $arg) {
@@ -70,17 +59,17 @@ class Command implements CommandInterface
         return $args;
     }
 
-    public function getType()
+    public function getType(): int
     {
         return $this->type->getType();
     }
 
-    public function getName()
+    public function getName(): string
     {
         return $this->type->getName();
     }
 
-    public function getMagic()
+    public function getMagic(): string
     {
         return $this->magic;
     }

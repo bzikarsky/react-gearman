@@ -3,7 +3,7 @@
 namespace Zikarsky\React\Gearman;
 
 use Ramsey\Uuid\Uuid;
-use React\Promise\FulfilledPromise;
+use React\Promise\Deferred;
 use React\Promise\PromiseInterface;
 use Zikarsky\React\Gearman\Event\TaskDataEvent;
 use Zikarsky\React\Gearman\Event\TaskEvent;
@@ -12,7 +12,7 @@ use Zikarsky\React\Gearman\Protocol\Connection;
 use Zikarsky\React\Gearman\Protocol\Participant;
 use Zikarsky\React\Gearman\Command\Binary\CommandInterface;
 use Zikarsky\React\Gearman\Command\Exception as ProtocolException;
-use React\Promise\Promise;
+use function React\Promise\reject;
 
 /**
  * A client can submit work requests to a Gearman server
@@ -28,7 +28,7 @@ class Client extends Participant implements ClientInterface
     /**
      * @var string[]
      */
-    private static $workEvents = [
+    private static array $workEvents = [
         "WORK_COMPLETE",
         "WORK_STATUS",
         "WORK_FAIL",
@@ -40,19 +40,15 @@ class Client extends Participant implements ClientInterface
     /**
      * @var TaskInterface[]
      */
-    protected $tasks = [];
+    protected array $tasks = [];
 
-    protected $uniqueTasks = [];
-
-    /**
-     * @var int
-     */
-    protected $pendingActions = 0;
+    protected array $uniqueTasks = [];
+    protected int $pendingActions = 0;
 
     /**
-     * @var \React\Promise\Deferred[]
+     * @var Deferred[]
      */
-    protected $waitingPromises = [];
+    protected array $waitingPromises = [];
 
     /**
      * Creates the client on top of the given connection
@@ -76,20 +72,12 @@ class Client extends Participant implements ClientInterface
         });
     }
 
-    /**
-     * @param $handle
-     * @return null|TaskInterface
-     */
-    protected function getTaskByHandle($handle)
+    protected function getTaskByHandle(string $handle): ?TaskInterface
     {
-        if (isset($this->tasks[$handle])) {
-            return $this->tasks[$handle];
-        }
-
-        return null;
+        return $this->tasks[$handle] ?? null;
     }
 
-    protected function assertUniqueId($uniqueId = null)
+    protected function assertUniqueId(?string $uniqueId = null): string
     {
         if (empty($uniqueId)) {
             $uniqueId = Uuid::uuid4()->toString();
@@ -98,16 +86,17 @@ class Client extends Participant implements ClientInterface
         return $uniqueId;
     }
 
-    protected function checkUniqueTasks($function, $uniqueId)
+    protected function checkUniqueTasks(string $function, string $uniqueId): void
     {
-        if (isset($this->uniqueTasks[$function . ';' . $uniqueId])) {
+        $key = $function . ';' . $uniqueId;
+        if (isset($this->uniqueTasks[$key])) {
             throw new DuplicateJobException("Job with unique id already submitted");
         }
 
         $this->uniqueTasks[$function . ';' . $uniqueId] = true;
     }
 
-    protected function setTaskDone(TaskInterface $task)
+    protected function setTaskDone(TaskInterface $task): void
     {
         unset($this->tasks[$task->getHandle()]);
 
@@ -118,30 +107,19 @@ class Client extends Participant implements ClientInterface
         $this->taskEnd();
     }
 
-    /**
-     * Submits the given work-request (function, workload) at the given priority
-     * The promise resolves with a representing TaskInterface instance as soon the server
-     * confirms the queuing of the task
-     *
-     * @param string $function
-     * @param string $workload
-     * @param string $priority
-     * @param string $uniqueId
-     * @return Promise
-     */
-    public function submit($function, $workload = "", $priority = TaskInterface::PRIORITY_NORMAL, $uniqueId = "")
+    public function submit(string $function, ?string $workload = null, string $priority = TaskInterface::PRIORITY_NORMAL, string $uniqueId = ""): PromiseInterface
     {
         $uniqueId = $this->assertUniqueId($uniqueId);
         $this->checkUniqueTasks($function, $uniqueId);
 
-        $type = "SUBMIT_JOB" . ($priority == "" ? "" : "_" . strtoupper($priority));
+        $type = "SUBMIT_JOB" . ($priority === "" ? "" : "_" . strtoupper($priority));
         $command = $this->getCommandFactory()->create($type, [
             'function_name' => $function,
             'id' => $uniqueId,
             CommandInterface::DATA => $workload
         ]);
 
-        $promise = $this->blockingAction(
+        return $this->blockingAction(
             $command,
             "JOB_CREATED",
             function (CommandInterface $submitCmd, CommandInterface $createdCmd) use ($workload, $priority, $uniqueId) {
@@ -163,32 +141,19 @@ class Client extends Participant implements ClientInterface
                 return $task;
             }
         );
-
-        return $promise;
     }
 
-    /**
-     * Submits the given work-request (function, workload) at the given priority
-     * The promise resolves with a representing TaskInterface instance as soon the server
-     * confirms the queuing of the task
-     *
-     * @param $function
-     * @param string $workload
-     * @param string $priority
-     * @param string $uniqueId
-     * @return Promise
-     */
-    public function submitBackground($function, $workload = "", $priority = TaskInterface::PRIORITY_NORMAL, $uniqueId = "")
+    public function submitBackground(string $function, ?string $workload = null, string $priority = TaskInterface::PRIORITY_NORMAL, string $uniqueId = ""): PromiseInterface
     {
         $uniqueId = $this->assertUniqueId($uniqueId);
-        $type = "SUBMIT_JOB" . ($priority == "" ? "" : "_" . strtoupper($priority)) . "_BG";
+        $type = "SUBMIT_JOB" . ($priority === "" ? "" : "_" . strtoupper($priority)) . "_BG";
         $command = $this->getCommandFactory()->create($type, [
             'function_name' => $function,
             'id' => $uniqueId,
             CommandInterface::DATA => $workload
         ]);
 
-        $promise = $this->blockingAction(
+        return $this->blockingAction(
             $command,
             "JOB_CREATED",
             function (CommandInterface $submitCmd, CommandInterface $createdCmd) use ($workload, $priority, $uniqueId) {
@@ -204,13 +169,11 @@ class Client extends Participant implements ClientInterface
                 return $task;
             }
         );
-
-        return $promise;
     }
 
-    public function setOption($option)
+    public function setOption(string $option): PromiseInterface
     {
-        if ($option != self::OPTION_FORWARD_EXCEPTIONS) {
+        if ($option !== self::OPTION_FORWARD_EXCEPTIONS) {
             throw new ProtocolException("Unsupported option $option");
         }
 
@@ -220,7 +183,7 @@ class Client extends Participant implements ClientInterface
 
         return $this->blockingAction($command, 'OPTION_RES', function (CommandInterface $req, CommandInterface $res) {
             $option = $req->get('option_name');
-            $success = $option == $res->get('option_name');
+            $success = $option === $res->get('option_name');
 
             if (!$success) {
                 throw new ProtocolException("Failed to set option. Server responded with different option");
@@ -232,7 +195,7 @@ class Client extends Participant implements ClientInterface
         });
     }
 
-    public function getStatus($task)
+    public function getStatus($task): PromiseInterface
     {
         $handle = $task instanceof Task ? $task->getHandle() : $task;
 
@@ -244,14 +207,14 @@ class Client extends Participant implements ClientInterface
             $command,
             "STATUS_RES",
             function (CommandInterface $req, CommandInterface $res) use ($handle, $task) {
-                if ($req->get('job_handle') != $res->get('job_handle')) {
+                if ($req->get('job_handle') !== $res->get('job_handle')) {
                     throw new ProtocolException("Job handle of returned STATUS_RES does not match the requested one");
                 }
 
                 $emitter = $task instanceof Task ? $task : $this->getTaskByHandle($handle);
 
                 $event = new TaskStatusEvent(
-                    $emitter !== null ? $emitter : new UnknownTask($handle),
+                    $emitter ?? new UnknownTask($handle),
                     $res->get('status'),
                     $res->get('running_status'),
                     $res->get('complete_numerator'),
@@ -270,7 +233,7 @@ class Client extends Participant implements ClientInterface
         );
     }
 
-    public function cancel(TaskInterface $task)
+    public function cancel(TaskInterface $task): void
     {
         $this->setTaskDone($task);
         $task->removeAllListeners();
@@ -278,20 +241,18 @@ class Client extends Participant implements ClientInterface
 
     /**
      * Waits until all pending tasks + submits have finished
-     *
-     * @return PromiseInterface
      */
-    public function wait()
+    public function wait(): PromiseInterface
     {
         if (!$this->hasPendingTasks()) {
-            return new FulfilledPromise();
+            return reject();
         }
-        $deferred = new \React\Promise\Deferred();
+        $deferred = new Deferred();
         $this->waitingPromises[] = $deferred;
         return $deferred->promise();
     }
 
-    protected function handleWorkEvent(CommandInterface $command)
+    protected function handleWorkEvent(CommandInterface $command): void
     {
         $handle = $command->get('job_handle');
         $task = $this->getTaskByHandle($handle);
@@ -363,24 +324,24 @@ class Client extends Participant implements ClientInterface
     }
 
 
-    protected function taskStart()
+    protected function taskStart(): void
     {
-        if (count($this->tasks) == 0) {
+        if (count($this->tasks) === 0) {
             $this->getConnection()->resume();
         }
     }
 
-    protected function taskEnd()
+    protected function taskEnd(): void
     {
         $this->disableReadableIfNoTasks();
     }
 
-    protected function hasPendingTasks()
+    protected function hasPendingTasks(): bool
     {
         return (count($this->tasks) + $this->pendingActions) > 0;
     }
 
-    protected function disableReadableIfNoTasks()
+    protected function disableReadableIfNoTasks(): void
     {
         if (!$this->hasPendingTasks()) {
             $this->getConnection()->pause();

@@ -10,30 +10,18 @@ namespace Zikarsky\React\Gearman\Command\Binary;
  */
 class CommandType
 {
+    protected string $name;
+    protected int $type;
+
+    /** @var string[] */
+    protected array $arguments;
 
     /**
-     * @var string
-     */
-    protected $name;
-
-    /**
-     * @var integer
-     */
-    protected $type;
-
-    /**
-     * @var string[]
-     */
-    protected $arguments;
-
-    /**
-     * Creates a types
+     * Creates a type
      *
-     * @param string   $name
-     * @param integer  $type
      * @param string[] $arguments
      */
-    public function __construct($name, $type, array $arguments = [])
+    public function __construct(string $name, int $type, array $arguments = [])
     {
         $this->name = $name;
         $this->type = $type;
@@ -42,10 +30,8 @@ class CommandType
 
     /**
      * Returns a user-readable string representation of the type
-     *
-     * @return string
      */
-    public function __toString()
+    public function __toString(): string
     {
         return $this->name . '(' . $this->type . ')';
     }
@@ -55,38 +41,31 @@ class CommandType
      *
      * @return string[]
      */
-    public function getArguments()
+    public function getArguments(): array
     {
         return $this->arguments;
     }
 
     /**
      * Return the type's name
-     *
-     * @return string
      */
-    public function getName()
+    public function getName(): string
     {
         return $this->name;
     }
 
     /**
      * Returns the type's integer code
-     *
-     * @return integer
      */
-    public function getType()
+    public function getType(): int
     {
         return $this->type;
     }
 
     /**
      * Checks whether a certain argument is exists in this type
-     *
-     * @param  string $name
-     * @return bool
      */
-    public function hasArgument($name)
+    public function hasArgument(string $name): bool
     {
         return in_array($name, $this->arguments);
     }

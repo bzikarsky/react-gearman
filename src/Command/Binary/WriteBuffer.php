@@ -16,14 +16,14 @@ class WriteBuffer
     /**
      * @var string
      */
-    protected $buffer = "";
+    protected string $buffer = "";
 
     /**
      * Pushes a command to the buffer after converting it to the byte-representation
      */
-    public function push(CommandInterface $command)
+    public function push(CommandInterface $command): int
     {
-        $argv = array_values($command->getAll(null, true));
+        $argv = array_values($command->getAll());
         $body = implode(CommandInterface::ARGUMENT_DELIMITER, $argv);
 
         $this->buffer .= pack(
@@ -42,25 +42,23 @@ class WriteBuffer
      * Shifts a number of bytes (default: all) from the beginning of the buffer
      * and returns them
      *
-     * @param  int|null                 $numBytes
-     * @return string
      * @throws InvalidArgumentException
      * @throws OutOfBoundsException
      */
-    public function shift($numBytes = null)
+    public function shift(?int $numBytes = null): string
     {
         if ($numBytes !== null && $numBytes < 1) {
             throw new InvalidArgumentException("Can only shift 1 or more bytes");
         }
 
         $bufLen = strlen($this->buffer);
-        $numBytes = $numBytes === null ? $bufLen : intval($numBytes);
+        $numBytes = $numBytes ?? $bufLen;
 
         if ($numBytes > $bufLen) {
             throw new OutOfBoundsException("Requested byte count exceeds buffer length");
         }
 
-        if ($bufLen == $numBytes) {
+        if ($bufLen === $numBytes) {
             $result = $this->buffer;
             $this->buffer = "";
         } else {

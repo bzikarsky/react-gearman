@@ -2,54 +2,31 @@
 
 namespace Zikarsky\React\Gearman;
 
+use Closure;
+use LogicException;
 use React\Promise\Deferred;
+use React\Promise\PromiseInterface;
+use RuntimeException;
+use Throwable;
 use Zikarsky\React\Gearman\Protocol\Connection;
 use Zikarsky\React\Gearman\Protocol\Participant;
 use Zikarsky\React\Gearman\Command\Binary\CommandInterface;
 
 class Worker extends Participant implements WorkerInterface
 {
-    protected $functions = [];
-
-    /**
-     * @var int
-     */
-    protected $maxParallelRequests = 1;
-
-    /**
-     * @var int
-     */
-    protected $inflightRequests = 0;
-
-    /**
-     * @var bool
-     */
-    protected $acceptNewJobs = true;
-
-    /**
-     * @var int
-     */
-    protected $grabsInFlight = 0;
-
-    /**
-     * @var Deferred
-     */
-    protected $shutdownPromise = null;
-
-    /**
-     * @var bool
-     */
-    protected $isShutDown = false;
+    protected array $functions = [];
+    protected int $maxParallelRequests = 1;
+    protected int $inflightRequests = 0;
+    protected bool $acceptNewJobs = true;
+    protected int $grabsInFlight = 0;
+    protected ?Deferred $shutdownPromise = null;
+    protected bool $isShutDown = false;
 
     /**
      * @var JobInterface[]
      */
-    protected $runningJobs = [];
-
-    /**
-     * @var bool
-     */
-    protected $grabUniques = false;
+    protected array $runningJobs = [];
+    protected bool $grabUniques = false;
 
     public function __construct(Connection $connection, bool $grabUniques = false)
     {
@@ -74,15 +51,12 @@ class Worker extends Participant implements WorkerInterface
     /**
      * @return JobInterface[]
      */
-    public function getRunningJobs()
+    public function getRunningJobs(): array
     {
         return $this->runningJobs;
     }
 
-    /**
-     * @return int
-     */
-    public function getInflightRequests()
+    public function getInflightRequests(): int
     {
         return $this->inflightRequests;
     }
@@ -91,15 +65,13 @@ class Worker extends Participant implements WorkerInterface
      * To make full use of async I/O, jobs can be accepted and processed in parallel
      * {$$maxParallelRequests} limits the number of jobs that are accepted from
      * the gearman server before an active job has to complete or fail
-     *
-     * @param int $maxParallelRequests
      */
-    public function setMaxParallelRequests($maxParallelRequests)
+    public function setMaxParallelRequests(int $maxParallelRequests): void
     {
         $this->maxParallelRequests = $maxParallelRequests;
     }
 
-    public function setId($id)
+    public function setId(string $id): PromiseInterface
     {
         $command = $this->getCommandFactory()->create('SET_CLIENT_ID', [
             'worker_id' => $id
@@ -108,14 +80,14 @@ class Worker extends Participant implements WorkerInterface
         return $this->send($command);
     }
 
-    public function register($function, callable $callback = null, $timeout = null)
+    public function register(string $function, callable $callback = null, ?int $timeout = null): PromiseInterface
     {
         $type = 'CAN_DO';
         $data = ['function_name' => $function];
 
         if ($timeout !== null) {
             $type .= '_TIMEOUT';
-            $data['timeout'] = intval($timeout);
+            $data['timeout'] = $timeout;
         }
 
         $command = $this->getCommandFactory()->create($type, $data);
@@ -132,13 +104,13 @@ class Worker extends Participant implements WorkerInterface
         return $promise;
     }
 
-    public function unregister($function)
+    public function unregister(string $function): PromiseInterface
     {
         if (!isset($this->functions[$function])) {
-            throw new \RuntimeException("Cannot unregister unknown function $function");
+            throw new RuntimeException("Cannot unregister unknown function $function");
         }
 
-        $command = $this->getCommandFactory->create("CANT_DO", ['function_name' => $function]);
+        $command = $this->getCommandFactory()->create("CANT_DO", ['function_name' => $function]);
         $promise = $this->send($command);
 
         $promise->then(function () use ($function) {
@@ -149,7 +121,7 @@ class Worker extends Participant implements WorkerInterface
         return $promise;
     }
 
-    public function unregisterAll()
+    public function unregisterAll(): PromiseInterface
     {
         $command = $this->getCommandFactory()->create('RESET_ABILITIES');
         $promise = $this->send($command);
@@ -161,30 +133,30 @@ class Worker extends Participant implements WorkerInterface
         return $promise;
     }
 
-    public function getRegisteredFunctions()
+    public function getRegisteredFunctions(): array
     {
         return array_values($this->functions);
     }
 
-    public function disconnect()
+    public function disconnect(): void
     {
         $this->unregisterAll();
 
         parent::disconnect();
     }
 
-    public function forceShutdown()
+    public function forceShutdown(): PromiseInterface
     {
         $this->runningJobs = [];
         $this->initShutdown();
         return $this->shutdownPromise->promise();
     }
 
-    public function shutdown()
+    public function shutdown(): PromiseInterface
     {
         if ($this->shutdownPromise === null) {
-            $this->shutdownPromise = $shutdown = new Deferred();
-            if (count($this->runningJobs) == 0) {
+            $this->shutdownPromise = new Deferred();
+            if (count($this->runningJobs) === 0) {
                 $this->initShutdown();
             } else {
                 $this->pause();
@@ -194,7 +166,7 @@ class Worker extends Participant implements WorkerInterface
         return $this->shutdownPromise->promise();
     }
 
-    protected function finishShutdown()
+    protected function finishShutdown(): void
     {
         // Avoid race condition between direct shutdown + close listener, avoid double shutdown
         $this->runningJobs = [];
@@ -203,14 +175,14 @@ class Worker extends Participant implements WorkerInterface
             if ($this->shutdownPromise !== null) {
                 try {
                     $this->shutdownPromise->resolve();
-                } catch (\Throwable $e) {
+                } catch (Throwable $e) {
                     $this->shutdownPromise->reject($e);
                 }
             }
         }
     }
 
-    protected function initShutdown()
+    protected function initShutdown(): void
     {
         $this->disconnect();
         $this->finishShutdown();
@@ -219,7 +191,7 @@ class Worker extends Participant implements WorkerInterface
     /**
      * Stop accepting new jobs
      */
-    public function pause()
+    public function pause(): void
     {
         $this->acceptNewJobs = false;
         if ($this->grabsInFlight <= 0) {
@@ -230,17 +202,17 @@ class Worker extends Participant implements WorkerInterface
     /**
      * Accept new jobs again
      */
-    public function resume()
+    public function resume(): void
     {
         if ($this->shutdownPromise !== null) {
-            throw new \RuntimeException("Worker is shutting down");
+            throw new RuntimeException("Worker is shutting down");
         }
         $this->acceptNewJobs = true;
         $this->getConnection()->resume();
         $this->grabJob();
     }
 
-    protected function grabJob()
+    protected function grabJob(): void
     {
         if ($this->acceptNewJobs && $this->inflightRequests < $this->maxParallelRequests) {
             $this->inflightRequests++;
@@ -248,7 +220,7 @@ class Worker extends Participant implements WorkerInterface
         }
     }
 
-    protected function grabJobSend()
+    protected function grabJobSend(): void
     {
         $type = $this->grabUniques ? 'GRAB_JOB_UNIQ' : 'GRAB_JOB';
 
@@ -257,7 +229,7 @@ class Worker extends Participant implements WorkerInterface
         $this->grabsInFlight++;
     }
 
-    protected function handleGrabJobResponse()
+    protected function handleGrabJobResponse(): bool
     {
         $this->grabsInFlight--;
         if ($this->grabsInFlight <= 0 && !$this->acceptNewJobs) {
@@ -267,7 +239,7 @@ class Worker extends Participant implements WorkerInterface
         return $this->acceptNewJobs;
     }
 
-    protected function handleNoJob()
+    protected function handleNoJob(): void
     {
         $this->onInflightDone();
         $this->handleGrabJobResponse();
@@ -277,17 +249,17 @@ class Worker extends Participant implements WorkerInterface
         }
     }
 
-    protected function onInflightDone()
+    protected function onInflightDone(): void
     {
         $this->inflightRequests--;
     }
 
-    protected function onJobDone($handle)
+    protected function onJobDone($handle): void
     {
         unset($this->runningJobs[$handle]);
     }
 
-    protected function makeJobSender()
+    protected function makeJobSender(): Closure
     {
         return function ($command, array $payload) {
             $promise = $this->send($this->getCommandFactory()->create($command, $payload));
@@ -305,20 +277,20 @@ class Worker extends Participant implements WorkerInterface
         };
     }
 
-    protected function handleJob(CommandInterface $command)
+    protected function handleJob(CommandInterface $command): void
     {
         $this->processJob(Job::fromCommand($command, $this->makeJobSender()));
     }
 
-    protected function handleUniqueJob(CommandInterface $command)
+    protected function handleUniqueJob(CommandInterface $command): void
     {
         $this->processJob(Job::uniqueFromCommand($command, $this->makeJobSender()));
     }
 
-    protected function processJob(JobInterface $job)
+    protected function processJob(JobInterface $job): void
     {
         if (!isset($this->functions[$job->getFunction()])) {
-            throw new \LogicException("Got job for unknown function {$job->getFunction()}");
+            throw new LogicException("Got job for unknown function {$job->getFunction()}");
         }
 
         $this->handleGrabJobResponse();

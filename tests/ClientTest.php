@@ -22,13 +22,11 @@ class ClientTest extends \PHPUnit\Framework\TestCase
 
     public function setUp(): void
     {
-        $stream = $this->createMock(\React\Stream\Stream::class);
-        $this->buffer = $this->createPartialMock(\React\Stream\Buffer::class, ['isWritable']);
-        $stream->expects($this->any())->method('getBuffer')->willReturn($this->buffer);
+        $stream = $this->createMock(\React\Stream\DuplexStreamInterface::class);
         $this->factory = new \Zikarsky\React\Gearman\Command\Binary\DefaultCommandFactory();
 
         $this->connection = $this->getMockBuilder(\Zikarsky\React\Gearman\Protocol\Connection::class)
-            ->setMethods(['send', 'close'])
+            ->onlyMethods(['send', 'close'])
             ->setConstructorArgs([$stream, $this->factory])
             ->getMock();
         $this->connection->expects($this->any())->method('send')->will($this->returnValue(new FulfilledPromise()));
@@ -68,7 +66,6 @@ class ClientTest extends \PHPUnit\Framework\TestCase
     {
         return [
             ["test", "data", TaskInterface::PRIORITY_HIGH, ''],
-            ["test", ["test" => "serialize"], TaskInterface::PRIORITY_LOW, ''],
             ["123", "", TaskInterface::PRIORITY_NORMAL, '123'],
         ];
     }
@@ -317,8 +314,8 @@ class ClientTest extends \PHPUnit\Framework\TestCase
         });
         $this->connection->emit('close');
 
-        $this->assertNull($promiseTask);
-        $this->assertInstanceOf(\Zikarsky\React\Gearman\ConnectionLostException::class, $exception);
+        self::assertNull($promiseTask);
+        self::assertInstanceOf(\Zikarsky\React\Gearman\ConnectionLostException::class, $exception);
     }
 
     public function testSubmitBackgroundWithLostConnectionAfterWrite()
@@ -332,11 +329,10 @@ class ClientTest extends \PHPUnit\Framework\TestCase
         }, function ($e) use (&$exception) {
             $exception = $e;
         });
-        $this->buffer->emit('full-drain');
         $this->connection->emit('close');
 
-        $this->assertNull($promiseTask);
-        $this->assertInstanceOf(\Zikarsky\React\Gearman\ConnectionLostException::class, $exception);
+        self::assertNull($promiseTask);
+        self::assertInstanceOf(\Zikarsky\React\Gearman\ConnectionLostException::class, $exception);
     }
 
     public function testSubmitWithLostConnectionBeforeWrite()
@@ -367,11 +363,10 @@ class ClientTest extends \PHPUnit\Framework\TestCase
         }, function ($e) use (&$exception) {
             $exception = $e;
         });
-        $this->buffer->emit('full-drain');
         $this->connection->emit('close');
 
-        $this->assertNull($promiseTask);
-        $this->assertInstanceOf(\Zikarsky\React\Gearman\ConnectionLostException::class, $exception);
+        self::assertNull($promiseTask);
+        self::assertInstanceOf(\Zikarsky\React\Gearman\ConnectionLostException::class, $exception);
     }
 
     public function testSubmitAfterLostConnection()
