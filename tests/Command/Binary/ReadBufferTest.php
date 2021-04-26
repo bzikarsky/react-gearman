@@ -26,7 +26,8 @@ class ReadBufferTest extends \PHPUnit\Framework\TestCase
     protected $reqPacket;
     protected $resPacket;
 
-    public function setUp(): void    {
+    public function setUp(): void
+    {
         $this->fac = new CommandFactory();
 
         $this->typeA = new CommandType("TEST_A", 1, []);
