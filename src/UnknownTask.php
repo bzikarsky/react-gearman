@@ -6,7 +6,6 @@ use Evenement\EventEmitter;
 
 class UnknownTask extends EventEmitter implements TaskInterface
 {
-
     protected string $handle;
 
     public function __construct(string $handle)

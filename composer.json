@@ -21,8 +21,5 @@
             "Zikarsky\\React\\Gearman\\": "src/"
         }
     },
-    "config": {
-        "bin-dir": "bin"
-    },
     "description": "A async implementation for gearman ontop of react"
 }

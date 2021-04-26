@@ -17,7 +17,8 @@ class SystemTest extends \PHPUnit\Framework\TestCase
     const HOST = '127.0.0.1';
     const PORT = 4730;
 
-    public function setUp(): void    {
+    public function setUp(): void
+    {
         $socket = @stream_socket_client("tcp://" . self::HOST . ":" . self::PORT);
         if ($socket === false) {
             $this->markTestSkipped("No gearman instance available");

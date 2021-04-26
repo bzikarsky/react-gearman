@@ -13,7 +13,8 @@ class CommandTest extends \PHPUnit\Framework\TestCase
     protected $data;
     protected $command;
 
-    public function setUp(): void    {
+    public function setUp(): void
+    {
         $this->type = new CommandType("TEST", 1, ["arg1", "arg2"]);
         $this->data = ["arg1" => 1];
         $this->magic = CommandInterface::MAGIC_REQUEST;

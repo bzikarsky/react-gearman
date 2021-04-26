@@ -15,7 +15,8 @@ class ConnectionTest extends \PHPUnit\Framework\TestCase
     protected $stream;
     protected Connection $connection;
 
-    public function setUp(): void    {
+    public function setUp(): void
+    {
         $this->setUpStream();
     }
 
@@ -69,7 +70,6 @@ class ConnectionTest extends \PHPUnit\Framework\TestCase
         $connection->send($this->packet)->otherwise(function ($e) use (&$thrown) {
             $thrown = $e;
         });
-
     }
 
     public function testHandledPacketEvent()

@@ -8,8 +8,8 @@ before_script:
   - composer install --ignore-platform-reqs
 
 script:
-  - bin/phpunit --coverage-text --verbose
-  - bin/php-cs-fixer fix --dry-run --diff -vv
+  - vendor/bin/phpunit --coverage-text --verbose
+  - vendor/bin/php-cs-fixer fix --dry-run --diff -vv
 
 sudo: true
 dist: focal
