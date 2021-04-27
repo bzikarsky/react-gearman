@@ -2,10 +2,12 @@
 
 namespace Zikarsky\React\Gearman;
 
+use Exception;
 use React\Promise\PromiseInterface;
 use React\Socket\ConnectorInterface;
 use React\Socket\DnsConnector;
 use React\Socket\TcpConnector;
+use RuntimeException;
 use Zikarsky\React\Gearman\Protocol\Connection;
 use Zikarsky\React\Gearman\Command\Binary\CommandFactoryInterface;
 use React\Dns\Resolver\Resolver;
@@ -53,12 +55,12 @@ class Factory
                         $deferred->resolve($client);
                     },
                     function () use ($deferred) {
-                        $deferred->reject("Initial test ping failed.");
+                        $deferred->reject(new RuntimeException("Initial test ping failed."));
                     }
                 );
             },
             function ($error) use ($deferred) {
-                $deferred->reject("Stream connect failed: $error");
+                $deferred->reject(new RuntimeException("Stream connect failed: $error"));
             }
         );
 
@@ -78,12 +80,12 @@ class Factory
                         $deferred->resolve($client);
                     },
                     function () use ($deferred) {
-                        $deferred->reject("Initial test ping failed.");
+                        $deferred->reject(new RuntimeException("Initial test ping failed."));
                     }
                 );
             },
             function ($error) use ($deferred) {
-                $deferred->reject("Stream connect failed: $error");
+                $deferred->reject(new RuntimeException("Stream connect failed: $error"));
             }
         );
 

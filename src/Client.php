@@ -4,6 +4,7 @@ namespace Zikarsky\React\Gearman;
 
 use Ramsey\Uuid\Uuid;
 use React\Promise\Deferred;
+use React\Promise\FulfilledPromise;
 use React\Promise\PromiseInterface;
 use Zikarsky\React\Gearman\Event\TaskDataEvent;
 use Zikarsky\React\Gearman\Event\TaskEvent;
@@ -13,6 +14,7 @@ use Zikarsky\React\Gearman\Protocol\Participant;
 use Zikarsky\React\Gearman\Command\Binary\CommandInterface;
 use Zikarsky\React\Gearman\Command\Exception as ProtocolException;
 use function React\Promise\reject;
+use function React\Promise\resolve;
 
 /**
  * A client can submit work requests to a Gearman server
@@ -245,7 +247,7 @@ class Client extends Participant implements ClientInterface
     public function wait(): PromiseInterface
     {
         if (!$this->hasPendingTasks()) {
-            return reject();
+            return resolve();
         }
         $deferred = new Deferred();
         $this->waitingPromises[] = $deferred;
