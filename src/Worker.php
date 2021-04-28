@@ -296,6 +296,11 @@ class Worker extends Participant implements WorkerInterface
 
     protected function processJob(JobInterface $job): void
     {
+        // If we are shutting down, ignore the job, we likely already unregistered the function
+        if ($this->shutdownPromise !== null) {
+            return;
+        }
+
         if (!isset($this->functions[$job->getFunction()])) {
             throw new LogicException("Got job for unknown function {$job->getFunction()}");
         }
