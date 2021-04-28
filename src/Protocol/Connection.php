@@ -146,7 +146,7 @@ class Connection extends EventEmitter
      */
     public function isClosed(): bool
     {
-        return $this->stream->isWritable();
+        return !$this->stream->isWritable();
     }
 
     /**

@@ -13,6 +13,7 @@ class ConnectionTest extends \PHPUnit\Framework\TestCase
     protected $packetStr;
 
     protected $stream;
+    private $writableStream;
     protected Connection $connection;
 
     public function setUp(): void
@@ -27,9 +28,11 @@ class ConnectionTest extends \PHPUnit\Framework\TestCase
         $fac = new CommandFactory();
         $fac->addType($this->type);
 
+        $this->writableStream = $this->createMock(\React\Stream\WritableStreamInterface::class);
+
         $this->stream = new \React\Stream\CompositeStream(
             $this->createMock(\React\Stream\ReadableStreamInterface::class),
-            $this->createMock(\React\Stream\WritableStreamInterface::class)
+            $this->writableStream
         );
 
         $this->connection = new Connection($this->stream, $fac);
@@ -53,6 +56,7 @@ class ConnectionTest extends \PHPUnit\Framework\TestCase
             $closeCalled = true;
         });
 
+        $this->writableStream->method('isWritable')->willReturn(false);
         $this->stream->emit("close");
         self::assertTrue($closeCalled);
         self::assertTrue($this->connection->isClosed());
@@ -65,11 +69,11 @@ class ConnectionTest extends \PHPUnit\Framework\TestCase
      */
     public function testSendFailOnClosedConnection(Connection $connection)
     {
+        $this->writableStream->method('isWritable')->willReturn(false);
+
         $this->expectException(BadMethodCallException::class);
         $thrown = null;
-        $connection->send($this->packet)->otherwise(function ($e) use (&$thrown) {
-            $thrown = $e;
-        });
+        $connection->send($this->packet);
     }
 
     public function testHandledPacketEvent()
