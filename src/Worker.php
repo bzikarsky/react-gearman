@@ -257,6 +257,10 @@ class Worker extends Participant implements WorkerInterface
     protected function onJobDone($handle): void
     {
         unset($this->runningJobs[$handle]);
+
+        if ($this->runningJobs === 0 && $this->shutdownPromise !== null) {
+            $this->initShutdown();
+        }
     }
 
     protected function makeJobSender(): Closure
