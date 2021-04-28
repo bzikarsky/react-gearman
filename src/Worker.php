@@ -138,17 +138,20 @@ class Worker extends Participant implements WorkerInterface
         return array_values($this->functions);
     }
 
-    public function disconnect(): void
+    public function disconnect(bool $graceful = false): void
     {
-        $this->unregisterAll();
+        if ($graceful) {
+            $this->unregisterAll();
+        }
 
-        parent::disconnect();
+        parent::disconnect($graceful);
     }
 
     public function forceShutdown(): PromiseInterface
     {
         $this->runningJobs = [];
-        $this->initShutdown();
+        $this->disconnect(false);
+        $this->finishShutdown();
         return $this->shutdownPromise->promise();
     }
 
@@ -184,7 +187,7 @@ class Worker extends Participant implements WorkerInterface
 
     protected function initShutdown(): void
     {
-        $this->disconnect();
+        $this->disconnect(true);
         $this->finishShutdown();
     }
 
@@ -258,7 +261,7 @@ class Worker extends Participant implements WorkerInterface
     {
         unset($this->runningJobs[$handle]);
 
-        if ($this->runningJobs === 0 && $this->shutdownPromise !== null) {
+        if (count($this->runningJobs) === 0 && $this->shutdownPromise !== null) {
             $this->initShutdown();
         }
     }

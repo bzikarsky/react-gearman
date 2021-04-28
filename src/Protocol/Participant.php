@@ -206,8 +206,12 @@ abstract class Participant extends EventEmitter
         return $this->connection->getCommandFactory();
     }
 
-    public function disconnect(): void
+    public function disconnect(bool $graceful = false): void
     {
-        $this->connection->close();
+        if ($graceful) {
+            $this->connection->end();
+        } else {
+            $this->connection->close();
+        }
     }
 }

@@ -1,5 +1,8 @@
 <?php
 
+use Amp\Deferred;
+use Amp\Loop;
+use React\EventLoop\LoopInterface;
 use Zikarsky\React\Gearman\ClientInterface;
 use Zikarsky\React\Gearman\DuplicateJobException;
 use Zikarsky\React\Gearman\Event\TaskDataEvent;
@@ -17,8 +20,12 @@ class SystemTest extends \PHPUnit\Framework\TestCase
     const HOST = '127.0.0.1';
     const PORT = 4730;
 
+    private LoopInterface $loop;
+
     public function setUp(): void
     {
+        $this->loop = \Amp\ReactAdapter\ReactAdapter::get();
+
         $socket = @stream_socket_client("tcp://" . self::HOST . ":" . self::PORT);
         if ($socket === false) {
             $this->markTestSkipped("No gearman instance available");
@@ -27,16 +34,33 @@ class SystemTest extends \PHPUnit\Framework\TestCase
         }
     }
 
-    protected function asyncTest(callable $coroutine)
+    protected function asyncTest(callable $coroutine, int $timeoutMs = 1000)
     {
+        // extensions using an event loop may otherwise leak the file descriptors to the loop
         gc_collect_cycles(); // extensions using an event loop may otherwise leak the file descriptors to the loop
-        \Amp\Loop::run($coroutine);
+
+        Loop::run(function () use ($coroutine, $timeoutMs) {
+            // Set up the watcher and keep the loop alive as long as it exists
+            $timeoutWatcher = Loop::delay($timeoutMs, fn () => $this->fail('Loop timed out'));
+            Loop::reference($timeoutWatcher);
+
+            // Run test
+            yield \Amp\call($coroutine);
+
+            // Cancel timeoutWatcher when the test concludes
+            Loop::cancel($timeoutWatcher);
+
+            // Check loop state afterwards
+            $info = \Amp\Loop::get()->getInfo();
+            if ($info['enabled_watchers']['referenced'] > 0) {
+                $this->fail("Loop has referenced watchers: " . json_encode($info));
+            }
+        });
     }
 
     protected function getFactory()
     {
-        $loop = \Amp\ReactAdapter\ReactAdapter::get();
-        return new \Zikarsky\React\Gearman\Factory($loop);
+        return new \Zikarsky\React\Gearman\Factory($this->loop);
     }
 
     protected function getWorkerAndClient()
@@ -52,16 +76,16 @@ class SystemTest extends \PHPUnit\Framework\TestCase
         return [$client, $worker];
     }
 
-    protected function getTaskPromise(TaskInterface $task, callable $onTask)
+    protected function getTaskPromise(TaskInterface $task, callable $onTask, int $taskTimeoutMs = 10000)
     {
-        $deferred = new \Amp\Deferred();
+        $deferred = new Deferred();
 
-        $watcher = \Amp\Loop::delay(10000, function () use ($deferred, $task) {
+        $watcher = Loop::delay($taskTimeoutMs, function () use ($deferred, $task) {
             $deferred->fail(new Exception("Job timed out: {$task->getWorkload()}"));
         });
 
         $task->on('complete', function (TaskDataEvent $event, ClientInterface $client) use ($deferred, $onTask, $watcher) {
-            \Amp\Loop::cancel($watcher);
+            Loop::cancel($watcher);
             try {
                 $onTask($event, $client);
                 $deferred->resolve();
@@ -71,12 +95,12 @@ class SystemTest extends \PHPUnit\Framework\TestCase
         });
 
         $task->on('exception', function (TaskDataEvent $event, ClientInterface $client) use ($deferred, $onTask, $watcher) {
-            \Amp\Loop::cancel($watcher);
+            Loop::cancel($watcher);
             $deferred->fail(new Exception($event->getData()));
         });
 
         $task->on('failure', function (TaskEvent $event, ClientInterface $client) use ($deferred, $onTask, $watcher) {
-            \Amp\Loop::cancel($watcher);
+            Loop::cancel($watcher);
             $deferred->fail(new Exception("N/A"));
         });
 
@@ -177,18 +201,19 @@ class SystemTest extends \PHPUnit\Framework\TestCase
             $task = yield $client->submitBackground($queueName, 'TestData');
             $this->assertInstanceOf(TaskInterface::class, $task);
 
-            $deferred = new \Amp\Deferred();
+            $deferred = new Deferred();
 
-            $watcher = \Amp\Loop::delay(100, function () use ($deferred) {
+            $watcher = Loop::delay(100, function () use ($deferred) {
                 $deferred->fail(new Exception("Job timed out"));
             });
 
             yield $worker->register($queueName, function (JobInterface $job) use (&$workerCalled, $deferred, $watcher) {
+                Loop::cancel($watcher);
+
                 $job->complete($job->getWorkload());
                 $workerCalled = true;
                 $this->assertEquals('TestData', $job->getWorkload());
                 $deferred->resolve();
-                \Amp\Loop::cancel($watcher);
             });
 
             yield $deferred->promise();
@@ -228,7 +253,7 @@ class SystemTest extends \PHPUnit\Framework\TestCase
                 $this->assertEquals('TestData2', $event->getData());
             });
 
-            $deferred = new \Amp\Deferred();
+            $deferred = new Deferred();
 
             $jobCalls = [];
             yield $worker->register($queueName, function (JobInterface $job) use (&$jobCalls, $deferred) {
@@ -264,8 +289,8 @@ class SystemTest extends \PHPUnit\Framework\TestCase
             yield $client->submitBackground($queueName, 'TestData1a', TaskInterface::PRIORITY_NORMAL, '1b');
             yield $client->submitBackground($queueName, 'TestData2', TaskInterface::PRIORITY_NORMAL, '2b');
 
-            $deferred = new \Amp\Deferred();
-            $watcher = \Amp\Loop::delay(100, function () use ($deferred) {
+            $deferred = new Deferred();
+            $watcher = Loop::delay(100, function () use ($deferred) {
                 $deferred->fail(new Exception("Job timed out"));
             });
 
@@ -274,8 +299,8 @@ class SystemTest extends \PHPUnit\Framework\TestCase
                 $job->complete($job->getWorkload());
                 $jobCalls[] = $job->getWorkload();
                 if (count($jobCalls) == 2) {
+                    Loop::cancel($watcher);
                     $deferred->resolve();
-                    \Amp\Loop::cancel($watcher);
                 }
             });
 
@@ -314,11 +339,11 @@ class SystemTest extends \PHPUnit\Framework\TestCase
                 $this->assertEquals('TestData4', $event->getData());
             });
 
-            $deferred = new \Amp\Deferred();
+            $deferred = new Deferred();
 
             $jobCalls = [];
 
-            $watcher = \Amp\Loop::delay(100, function () use ($deferred) {
+            $watcher = Loop::delay(100, function () use ($deferred) {
                 $deferred->fail(new Exception("Job timed out"));
             });
 
@@ -326,7 +351,7 @@ class SystemTest extends \PHPUnit\Framework\TestCase
                 $job->complete($job->getWorkload());
                 $jobCalls[] = $job->getWorkload();
                 if (count($jobCalls) == 2) {
-                    \Amp\Loop::cancel($watcher);
+                    Loop::cancel($watcher);
                     $deferred->resolve();
                 }
             });
@@ -358,11 +383,11 @@ class SystemTest extends \PHPUnit\Framework\TestCase
             yield $client->submitBackground($queueName, 'TestData3a', TaskInterface::PRIORITY_LOW, '3b');
             yield $client->submitBackground($queueName, 'TestData4', TaskInterface::PRIORITY_HIGH, '4b');
 
-            $deferred = new \Amp\Deferred();
+            $deferred = new Deferred();
 
             $jobCalls = [];
 
-            $watcher = \Amp\Loop::delay(100, function () use ($deferred) {
+            $watcher = Loop::delay(100, function () use ($deferred) {
                 $deferred->fail(new Exception("Job timed out"));
             });
 
@@ -370,7 +395,7 @@ class SystemTest extends \PHPUnit\Framework\TestCase
                 $job->complete($job->getWorkload());
                 $jobCalls[] = $job->getWorkload();
                 if (count($jobCalls) == 2) {
-                    \Amp\Loop::cancel($watcher);
+                    Loop::cancel($watcher);
                     $deferred->resolve();
                 }
             });
@@ -400,15 +425,15 @@ class SystemTest extends \PHPUnit\Framework\TestCase
             $task = yield $client->submit($queueName, 'TestData1', TaskInterface::PRIORITY_NORMAL, '1p');
 
             $dataReceived = [];
-            $task->on('data', function (TaskDataEvent $event, ClientInterface $client) use (&$dataReceived) {
+            $task->on('data', function (TaskDataEvent $event) use (&$dataReceived) {
                 $dataReceived[] = $event->getData();
             });
 
-            $taskPromise1 = $this->getTaskPromise($task, function (TaskDataEvent $event, ClientInterface $client) use (&$responseReceived) {
+            $taskPromise1 = $this->getTaskPromise($task, function (TaskDataEvent $event) use (&$responseReceived) {
                 $this->assertEquals('TestData1', $event->getData());
             });
 
-            $deferred = new \Amp\Deferred();
+            $deferred = new Deferred();
 
             $jobCalls = [];
             yield $worker->register($queueName, function (JobInterface $job) use (&$jobCalls, $deferred) {
@@ -583,7 +608,7 @@ class SystemTest extends \PHPUnit\Framework\TestCase
             $shutdownPromise = null;
             yield $worker->register($queueName, function (JobInterface $job) use ($worker, &$shutdownPromise) {
                 $shutdownPromise = $worker->shutdown();
-                $job->complete($job->getWorkload());
+                $this->loop->addTimer(1, fn () => $job->complete($job->getWorkload()));
             });
 
             /**
@@ -596,10 +621,10 @@ class SystemTest extends \PHPUnit\Framework\TestCase
             });
 
             yield $shutdownPromise;
-        });
+        }, 3000);
     }
 
-    public function testDisconnectIsNotGraceul()
+    public function testDisconnectIsNotGraceful()
     {
         $queueName = __METHOD__;
         $this->asyncTest(function () use ($queueName) {
@@ -627,12 +652,12 @@ class SystemTest extends \PHPUnit\Framework\TestCase
             try {
                 yield $this->getTaskPromise($task, function (TaskDataEvent $event, ClientInterface $client) use (&$responseReceived) {
                     $this->assertEquals('TestData', $event->getData());
-                });
+                }, 1000);
                 $this->fail("Job did not time out");
             } catch (Exception $e) {
                 $client->cancel($task);
                 $this->assertEquals("Job timed out: TestData", $e->getMessage());
             }
-        });
+        }, 2000);
     }
 }

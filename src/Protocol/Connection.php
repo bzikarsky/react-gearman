@@ -72,6 +72,11 @@ class Connection extends EventEmitter
             $this->emit('close', [$this]);
         });
 
+        $this->stream->on('end', function () {
+            $this->closed = true;
+            $this->emit('close', [$this]);
+        });
+
         $this->on('close', function () {
             foreach ($this->commandSendQueue as $deferred) {
                 $deferred->reject(new ConnectionLostException());
@@ -157,6 +162,13 @@ class Connection extends EventEmitter
     {
         if (!$this->isClosed()) {
             $this->stream->close();
+        }
+    }
+
+    public function end() : void
+    {
+        if ($this->isClosed()) {
+            $this->stream->end();
         }
     }
 }
