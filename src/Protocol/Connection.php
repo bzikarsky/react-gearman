@@ -68,12 +68,6 @@ class Connection extends EventEmitter
             throw new ProtocolException("Stream-Error: $error");
         });
         $this->stream->on('close', function () {
-            $this->closed = true;
-            $this->emit('close', [$this]);
-        });
-
-        $this->stream->on('end', function () {
-            $this->closed = true;
             $this->emit('close', [$this]);
         });
 
@@ -130,7 +124,7 @@ class Connection extends EventEmitter
      */
     public function send(CommandInterface $command): void
     {
-        if ($this->isClosed()) {
+        if (!$this->stream->isWritable()) {
             throw new BadMethodCallException("Connection is closed. Cannot send commands anymore");
         }
 
@@ -152,7 +146,7 @@ class Connection extends EventEmitter
      */
     public function isClosed(): bool
     {
-        return $this->closed;
+        return $this->stream->isWritable();
     }
 
     /**
@@ -160,15 +154,11 @@ class Connection extends EventEmitter
      */
     public function close(): void
     {
-        if (!$this->isClosed()) {
-            $this->stream->close();
-        }
+        $this->stream->close();
     }
 
     public function end() : void
     {
-        if ($this->isClosed()) {
-            $this->stream->end();
-        }
+        $this->stream->end();
     }
 }

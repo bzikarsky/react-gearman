@@ -43,9 +43,7 @@ class Worker extends Participant implements WorkerInterface
         $this->getConnection()->on('JOB_ASSIGN', [$this, 'handleJob']);
         $this->getConnection()->on('JOB_ASSIGN_UNIQ', [$this, 'handleUniqueJob']);
 
-        $this->on('close', function () {
-            $this->finishShutdown();
-        });
+        $this->on('close', [$this, 'finishShutdown']);
     }
 
     /**
@@ -160,7 +158,7 @@ class Worker extends Participant implements WorkerInterface
         if ($this->shutdownPromise === null) {
             $this->shutdownPromise = new Deferred();
             if (count($this->runningJobs) === 0) {
-                $this->initShutdown();
+                $this->disconnect(true);
             } else {
                 $this->pause();
             }
@@ -183,12 +181,6 @@ class Worker extends Participant implements WorkerInterface
                 }
             }
         }
-    }
-
-    protected function initShutdown(): void
-    {
-        $this->disconnect(true);
-        $this->finishShutdown();
     }
 
     /**
@@ -262,7 +254,7 @@ class Worker extends Participant implements WorkerInterface
         unset($this->runningJobs[$handle]);
 
         if (count($this->runningJobs) === 0 && $this->shutdownPromise !== null) {
-            $this->initShutdown();
+            $this->disconnect(true);
         }
     }
 
